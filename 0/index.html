@@ -1,1 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 0</title>
+    <style>
+        body {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+        }
 
+        h1 {
+            text-align: center;
+        }
+
+        section {
+            margin: 60px 0;
+        }
+
+        .photos {
+            display: flex;
+            gap: 20px;
+        }
+
+        figure {
+            flex: 1;
+            margin: 0;
+        }
+
+        img {
+            width: 100%;
+            height: auto;
+        }
+
+        figcaption {
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        .dolly {
+            display: block;
+            max-width: 500px;
+            margin: 20px auto;
+        }
+
+        @media (max-width: 600px) {
+            .photos {
+                display: block;
+            }
+
+            figure {
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="../index.html">Back to portfolio</a>
+
+    <h1>Project 0: Becoming Friends with Your Camera</h1>
+
+    <section>
+        <h2>Question 1: Selfie — The Close vs. Zoomed</h2>
+
+        <div class="photos">
+            <figure>
+                <img src="./media/selfie-close.JPG" alt="Selfie taken from close up">
+                <figcaption>Close-up selfie</figcaption>
+            </figure>
+
+            <figure>
+                <img src="./media/selfie-zoomed.JPG" alt="Selfie taken from farther away with zoom">
+                <figcaption>Farther away and zoomed in</figcaption>
+            </figure>
+        </div>
+
+        <p>
+            The close photo looks distorted because the camera is close to my face.In the second photo,
+            I moved farther away and zoomed in. This makes the proportions look more natural. I guess this
+            is why it looks better.
+        </p>
+    </section>
+
+    <section>
+        <h2>Question 2: Architectural Compression</h2>
+
+        <p><em>Architecture photos coming soon.</em></p>
+    </section>
+
+    <section>
+        <h2>Question 3: The Dolly Zoom</h2>
+
+        <img class="dolly" src="./media/dolly.GIF" alt="Animated dolly zoom of a water bottle">
+
+    </section>
+</body>
+</html>

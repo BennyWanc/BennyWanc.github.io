@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project 1 — Images of the Russian Empire</title>
+  <style>
+    body {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 20px;
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    section,
+    h2 {
+      margin-top: 60px;
+    }
+
+    .lead {
+      text-align: center;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .grid.two {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    figure {
+      margin: 0;
+    }
+
+    img {
+      width: 100%;
+      height: auto;
+    }
+
+    figcaption {
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    .note {
+      margin: 20px 0;
+    }
+
+    code {
+      background: #eee;
+      padding: 2px 4px;
+    }
+
+    @media (max-width: 600px) {
+      .grid,
+      .grid.two {
+        display: block;
+      }
+
+      figure {
+        margin-bottom: 20px;
+      }
+    }
+  </style>
+</head>
+<body><main>
+  <a href="../index.html">← Back to portfolio</a>
+  <h1>Images of the Russian Empire</h1>
+  <p class="lead">CS280A Project 1 · Colorizing the Prokudin-Gorskii photo collection</p>
+
+  <h2>Overview</h2>
+  <p>Each digitized glass plate contains three grayscale exposures in B, G, R order. I split the plate into thirds, held blue fixed, aligned green and red to blue, and stacked the aligned channels into an RGB image. Displacements below use <code>(x, y)</code>, where positive x moves right and positive y moves down.</p>
+
+  <h2>Single-scale alignment</h2>
+  <p>For the small JPEGs, I exhaustively searched translations in a 31×31 window centered at (0, 0). For every candidate, I shifted the channel with <code>np.roll</code>, ignored the outer image area, and measured normalized cross-correlation (NCC). NCC subtracts each crop's mean and normalizes its magnitude, so it compares spatial patterns with less sensitivity to overall brightness. The candidate with the highest NCC was selected.</p>
+  <div class="grid">
+    <figure><img src="images/final/cathedral_final.jpg" alt="Colorized cathedral"><figcaption>Cathedral — G (2, 5), R (3, 12)</figcaption></figure>
+    <figure><img src="images/final/monastery_final.jpg" alt="Colorized monastery"><figcaption>Monastery — G (2, −3), R (2, 3)</figcaption></figure>
+    <figure><img src="images/final/tobolsk_final.jpg" alt="Colorized Tobolsk"><figcaption>Tobolsk — G (2, 3), R (3, 6)</figcaption></figure>
+  </div>
+
+  <h2>Multi-scale pyramid</h2>
+  <p>Searching the full displacement range on large TIFFs would be expensive. I recursively resize each channel by one half until its largest dimension is at most 400 pixels. I search ±15 pixels at the coarsest level, double that displacement at each finer level, and refine it within ±2 pixels. The TIFF results take about four seconds each on my machine.</p>
+  <div class="grid">
+    <figure><img src="images/final/church_final.jpg" alt="Church"><figcaption>Church — G (4, 25), R (−4, 58)</figcaption></figure>
+    <figure><img src="images/final/emir_final.jpg" alt="Emir of Bukhara"><figcaption>Emir — G (24, 49), R (40, 107)</figcaption></figure>
+    <figure><img src="images/final/harvesters_final.jpg" alt="Harvesters"><figcaption>Harvesters — G (17, 60), R (14, 124)</figcaption></figure>
+    <figure><img src="images/final/icon_final.jpg" alt="Icon"><figcaption>Icon — G (17, 42), R (23, 90)</figcaption></figure>
+    <figure><img src="images/final/ilemselga_final.jpg" alt="Ilemselga"><figcaption>Ilemselga — G (7, 40), R (11, 131)</figcaption></figure>
+    <figure><img src="images/final/melons_final.jpg" alt="Melons"><figcaption>Melons — G (10, 80), R (13, 177)</figcaption></figure>
+    <figure><img src="images/final/religous_painting_final.jpg" alt="Religious painting"><figcaption>Religious painting — G (6, 30), R (6, 70)</figcaption></figure>
+    <figure><img src="images/final/self_portrait_final.jpg" alt="Self portrait"><figcaption>Self portrait — G (29, 78), R (37, 175)</figcaption></figure>
+    <figure><img src="images/final/siren_final.jpg" alt="Lilacs"><figcaption>Siren — G (−6, 49), R (−24, 96)</figcaption></figure>
+    <figure><img src="images/final/three_generations_final.jpg" alt="Three generations"><figcaption>Three generations — G (12, 54), R (9, 111)</figcaption></figure>
+    <figure><img src="images/final/wharf_final.jpg" alt="Wharf"><figcaption>Wharf — G (−7, 15), R (−16, 83)</figcaption></figure>
+  </div>
+
+  <h2>Additional collection images</h2>
+  <p>I selected three additional full glass-plate scans from the Prokudin-Gorskii collection and processed them with the same fixed parameters.</p>
+  <div class="grid">
+    <figure><img src="images/final/collection1_final.jpg" alt="Additional collection bridge"><figcaption>Collection 1 (bridge) — G (−12, 12), R (4, 68)</figcaption></figure>
+    <figure><img src="images/final/collection2_final.jpg" alt="Additional collection waterscape"><figcaption>Collection 2 (waterscape) — G (12, −19), R (25, 80)</figcaption></figure>
+    <figure><img src="images/final/collection3_final.jpg" alt="Additional collection church landscape"><figcaption>Collection 3 (church landscape) — G (16, 85), R (17, 172)</figcaption></figure>
+  </div>
+  <p class="note"><strong>Before submitting:</strong> replace “Collection 1/2/3” with the Library of Congress titles and add each item-page link.</p>
+
+  <h2>CS280A bells and whistles</h2>
+  <h3>Better features</h3>
+  <p>Raw pixels are unreliable when the same material has very different brightness through different filters. I compute gradient magnitude, √(dx²+dy²), and align those edge images with NCC. The shifts are then applied to the original channels. This substantially improved Emir: its robe, face, and architectural edges overlap more closely.</p>
+  <div class="grid two">
+    <figure><img src="images/comparisons/emir_ncc.jpg" alt="Emir aligned using raw pixels"><figcaption>Raw-pixel NCC</figcaption></figure>
+    <figure><img src="images/comparisons/emir_edges.jpg" alt="Emir aligned using gradients"><figcaption>Gradient-feature NCC</figcaption></figure>
+  </div>
+
+  <h3>Automatic cropping</h3>
+  <p>I first use the measured shifts to keep only pixels valid in all three channels. I then classify pixels with any channel below 0.05 or above 0.95 as likely border pixels and repeatedly remove an outer row or column when more than half of it is classified as border. Cropping is automatic, although colored bands that are not extreme can remain.</p>
+  <div class="grid two">
+    <figure><img src="images/comparisons/emir_edges.jpg" alt="Emir before automatic crop"><figcaption>Before automatic crop</figcaption></figure>
+    <figure><img src="images/comparisons/emir_cropped.jpg" alt="Emir after automatic crop"><figcaption>After automatic crop</figcaption></figure>
+  </div>
+
+  <h3>Automatic contrast</h3>
+  <p>I map the 0.5th intensity percentile to black and the 99.5th percentile to white, clipping values outside that range. Percentiles prevent a few defects or scan-border pixels from controlling the entire contrast stretch.</p>
+
+  <h3>Automatic white balance</h3>
+  <p>I use the gray-world assumption: the average scene color estimates the illuminant. Each channel is scaled toward the shared mean, using half of the full correction to avoid overly aggressive casts. It helps some scenes, such as Icon, but can make Emir slightly greener because its scene average is not neutral.</p>
+  <figure><img src="images/comparisons/wb_comparison.jpg" alt="White balance comparisons"><figcaption>Left: no white balance. Right: 50% gray-world white balance.</figcaption></figure>
+
+  <h3>Better color mapping</h3>
+  <p>I map each pixel toward its average gray value: gray + 0.9 × (RGB − gray). This retains luminance while reducing saturation by 10%, moderating exaggerated colors from treating the historical filtered exposures as modern RGB channels. This is an aesthetic mapping rather than a calibrated recovery of the original filter responses.</p>
+
+  <h2>Limitations</h2>
+  <p>A single translation cannot correct motion between the three exposures, so moving people, foliage, and water may retain local ghosting. Border detection also leaves some colored bands when their values are not sufficiently dark or bright. Gray-world white balance depends on the scene's average color and therefore gives mixed results. Despite these limitations, the edge-based pyramid produces stable global alignment across the provided images and three additional scans.</p>
+</main></body>
+</html>

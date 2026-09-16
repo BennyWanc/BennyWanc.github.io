@@ -74,41 +74,41 @@
 <body><main>
   <a href="../index.html">← Back to portfolio</a>
   <h1>Images of the Russian Empire</h1>
-  <p class="lead">CS280A Project 1 · Colorizing the Prokudin-Gorskii photo collection</p>
+  <p class="lead">CS280A Project 1 --- Colorizing the Prokudin-Gorskii photo collection</p>
 
   <h2>Overview</h2>
-  <p>Each digitized glass plate contains three grayscale exposures in B, G, R order. I split the plate into thirds, held blue fixed, aligned green and red to blue, and stacked the aligned channels into an RGB image. Displacements below use <code>(x, y)</code>, where positive x moves right and positive y moves down.</p>
+  <p>Each picture contains three grayscale exposures in B, G, R order. I held blue fixed, aligned green and red to blue, and stacked the aligned channels into an RGB image. The movement below use <code>(x, y)</code>, which means  x and  y moves for x,y axis.</p>
 
   <h2>Single-scale alignment</h2>
-  <p>For the small JPEGs, I exhaustively searched translations in a 31×31 window centered at (0, 0). For every candidate, I shifted the channel with <code>np.roll</code>, ignored the outer image area, and measured normalized cross-correlation (NCC). NCC subtracts each crop's mean and normalizes its magnitude, so it compares spatial patterns with less sensitivity to overall brightness. The candidate with the highest NCC was selected.</p>
+  <p>For the small JPEGs, I searched translations in a 31×31 window centered at (0, 0). For every photo, I shifted the channel with <code>np.roll</code>, ignored the outer image area, and measured normalized cross-correlation (NCC). The candidate with the highest NCC was selected.</p>
   <div class="grid">
-    <figure><img src="images/final/cathedral_final.jpg" alt="Colorized cathedral"><figcaption>Cathedral — G (2, 5), R (3, 12)</figcaption></figure>
-    <figure><img src="images/final/monastery_final.jpg" alt="Colorized monastery"><figcaption>Monastery — G (2, −3), R (2, 3)</figcaption></figure>
-    <figure><img src="images/final/tobolsk_final.jpg" alt="Colorized Tobolsk"><figcaption>Tobolsk — G (2, 3), R (3, 6)</figcaption></figure>
+    <figure><img src="images/Original/cathedral_aligned.jpg" alt="Colorized cathedral"><figcaption>Cathedral — G (2, 5), R (3, 12)</figcaption></figure>
+    <figure><img src="images/Original/monastery_aligned.jpg" alt="Colorized monastery"><figcaption>Monastery — G (2, −3), R (2, 3)</figcaption></figure>
+    <figure><img src="images/Original/tobolsk_aligned.jpg" alt="Colorized Tobolsk"><figcaption>Tobolsk — G (2, 3), R (3, 6)</figcaption></figure>
   </div>
 
   <h2>Multi-scale pyramid</h2>
-  <p>Searching the full displacement range on large TIFFs would be expensive. I recursively resize each channel by one half until its largest dimension is at most 400 pixels. I search ±15 pixels at the coarsest level, double that displacement at each finer level, and refine it within ±2 pixels. The TIFF results take about four seconds each on my machine.</p>
+  <p>Searching the full shifting range on large TIFFs would be hard and time consuming. I resized each channel by half until its largest dimension is at most 400 pixels. I search ±15 pixels at the coarsest level, double that displacement at each finer level, and refine it within ±2 pixels. The TIFF results take about four seconds each on my machine.</p>
   <div class="grid">
-    <figure><img src="images/final/church_final.jpg" alt="Church"><figcaption>Church — G (4, 25), R (−4, 58)</figcaption></figure>
-    <figure><img src="images/final/emir_final.jpg" alt="Emir of Bukhara"><figcaption>Emir — G (24, 49), R (40, 107)</figcaption></figure>
-    <figure><img src="images/final/harvesters_final.jpg" alt="Harvesters"><figcaption>Harvesters — G (17, 60), R (14, 124)</figcaption></figure>
-    <figure><img src="images/final/icon_final.jpg" alt="Icon"><figcaption>Icon — G (17, 42), R (23, 90)</figcaption></figure>
-    <figure><img src="images/final/ilemselga_final.jpg" alt="Ilemselga"><figcaption>Ilemselga — G (7, 40), R (11, 131)</figcaption></figure>
-    <figure><img src="images/final/melons_final.jpg" alt="Melons"><figcaption>Melons — G (10, 80), R (13, 177)</figcaption></figure>
-    <figure><img src="images/final/religous_painting_final.jpg" alt="Religious painting"><figcaption>Religious painting — G (6, 30), R (6, 70)</figcaption></figure>
-    <figure><img src="images/final/self_portrait_final.jpg" alt="Self portrait"><figcaption>Self portrait — G (29, 78), R (37, 175)</figcaption></figure>
-    <figure><img src="images/final/siren_final.jpg" alt="Lilacs"><figcaption>Siren — G (−6, 49), R (−24, 96)</figcaption></figure>
-    <figure><img src="images/final/three_generations_final.jpg" alt="Three generations"><figcaption>Three generations — G (12, 54), R (9, 111)</figcaption></figure>
-    <figure><img src="images/final/wharf_final.jpg" alt="Wharf"><figcaption>Wharf — G (−7, 15), R (−16, 83)</figcaption></figure>
+    <figure><img src="images/pyramid/church_ncc.jpg" alt="Church pyramid result"><figcaption>Church — G (4, 25), R (−4, 58)</figcaption></figure>
+    <figure><img src="images/pyramid/emir_ncc.jpg" alt="Emir pyramid result"><figcaption>Emir — G (24, 49), R (56, 104)</figcaption></figure>
+    <figure><img src="images/pyramid/harvesters_aligned.jpg" alt="Harvesters pyramid result"><figcaption>Harvesters — G (16, 59), R (13, 124)</figcaption></figure>
+    <figure><img src="images/pyramid/icon_aligned.jpg" alt="Icon pyramid result"><figcaption>Icon — G (17, 41), R (23, 90)</figcaption></figure>
+    <figure><img src="images/pyramid/ilemselga_aligned.jpg" alt="Ilemselga pyramid result"><figcaption>Ilemselga — G (7, 39), R (11, 130)</figcaption></figure>
+    <figure><img src="images/pyramid/melons_aligned.jpg" alt="Melons pyramid result"><figcaption>Melons — G (11, 82), R (13, 178)</figcaption></figure>
+    <figure><img src="images/pyramid/religous_painting_aligned.jpg" alt="Religious painting pyramid result"><figcaption>Religious painting — G (3, 28), R (7, 68)</figcaption></figure>
+    <figure><img src="images/pyramid/self_portrait_aligned.jpg" alt="Self portrait pyramid result"><figcaption>Self portrait — G (29, 79), R (36, 176)</figcaption></figure>
+    <figure><img src="images/pyramid/siren_aligned.jpg" alt="Siren pyramid result"><figcaption>Siren — G (−6, 49), R (−25, 96)</figcaption></figure>
+    <figure><img src="images/pyramid/three_generations_aligned.jpg" alt="Three generations pyramid result"><figcaption>Three generations — G (14, 53), R (11, 112)</figcaption></figure>
+    <figure><img src="images/pyramid/wharf_aligned.jpg" alt="Wharf pyramid result"><figcaption>Wharf — G (−7, 15), R (−16, 83)</figcaption></figure>
   </div>
 
   <h2>Additional collection images</h2>
   <p>I selected three additional full glass-plate scans from the Prokudin-Gorskii collection and processed them with the same fixed parameters.</p>
   <div class="grid">
-    <figure><img src="images/final/collection1_final.jpg" alt="Additional collection bridge"><figcaption>Collection 1 (bridge) — G (−12, 12), R (4, 68)</figcaption></figure>
-    <figure><img src="images/final/collection2_final.jpg" alt="Additional collection waterscape"><figcaption>Collection 2 (waterscape) — G (12, −19), R (25, 80)</figcaption></figure>
-    <figure><img src="images/final/collection3_final.jpg" alt="Additional collection church landscape"><figcaption>Collection 3 (church landscape) — G (16, 85), R (17, 172)</figcaption></figure>
+    <figure><img src="images/pyramid/collection1_aligned.jpg" alt="Additional collection bridge"><figcaption>Collection 1 (bridge) — G (−11, 12), R (4, 68)</figcaption></figure>
+    <figure><img src="images/pyramid/collection2_aligned.jpg" alt="Additional collection waterscape"><figcaption>Collection 2 (waterscape) — G (13, −19), R (25, 80)</figcaption></figure>
+    <figure><img src="images/pyramid/collection3_aligned.jpg" alt="Additional collection church landscape"><figcaption>Collection 3 (church landscape) — G (16, 85), R (17, 172)</figcaption></figure>
   </div>
   <p class="note"><strong>Before submitting:</strong> replace “Collection 1/2/3” with the Library of Congress titles and add each item-page link.</p>
 
@@ -121,10 +121,14 @@
   </div>
 
   <h3>Automatic cropping</h3>
-  <p>I first use the measured shifts to keep only pixels valid in all three channels. I then classify pixels with any channel below 0.05 or above 0.95 as likely border pixels and repeatedly remove an outer row or column when more than half of it is classified as border. Cropping is automatic, although colored bands that are not extreme can remain.</p>
+  <p>I first use the measured shifts to retain only the region shared by all three aligned channels. Within the outer 15% of the image, I mark dark pixels, bright pixels, and pixels with a large difference between color channels as likely border artifacts. I crop through the last suspicious row or column when more than 35% of it is marked. This detects the actual scan borders instead of removing a fixed margin.</p>
   <div class="grid two">
-    <figure><img src="images/comparisons/emir_edges.jpg" alt="Emir before automatic crop"><figcaption>Before automatic crop</figcaption></figure>
-    <figure><img src="images/comparisons/emir_cropped.jpg" alt="Emir after automatic crop"><figcaption>After automatic crop</figcaption></figure>
+    <figure><img src="images/middle/collection1_final.jpg" alt="Collection 1 before improved automatic crop"><figcaption>Collection 1 — previous crop</figcaption></figure>
+    <figure><img src="images/final/collection1_last.jpg" alt="Collection 1 after improved automatic crop"><figcaption>Collection 1 — improved crop</figcaption></figure>
+    <figure><img src="images/middle/collection2_final.jpg" alt="Collection 2 before improved automatic crop"><figcaption>Collection 2 — previous crop</figcaption></figure>
+    <figure><img src="images/final/collection2_last.jpg" alt="Collection 2 after improved automatic crop"><figcaption>Collection 2 — improved crop</figcaption></figure>
+    <figure><img src="images/middle/collection3_final.jpg" alt="Collection 3 before improved automatic crop"><figcaption>Collection 3 — previous crop</figcaption></figure>
+    <figure><img src="images/final/collection3_last.jpg" alt="Collection 3 after improved automatic crop"><figcaption>Collection 3 — improved crop</figcaption></figure>
   </div>
 
   <h3>Automatic contrast</h3>
@@ -135,7 +139,29 @@
   <figure><img src="images/comparisons/wb_comparison.jpg" alt="White balance comparisons"><figcaption>Left: no white balance. Right: 50% gray-world white balance.</figcaption></figure>
 
   <h3>Better color mapping</h3>
-  <p>I map each pixel toward its average gray value: gray + 0.9 × (RGB − gray). This retains luminance while reducing saturation by 10%, moderating exaggerated colors from treating the historical filtered exposures as modern RGB channels. This is an aesthetic mapping rather than a calibrated recovery of the original filter responses.</p>
+  <p>The historical glass-plate filters do not exactly match modern RGB channels, so I apply a small 3×3 linear color transformation. Each output channel keeps most of its original value, receives a slight boost, and subtracts a small contribution from the other two channels. This gently separates the colors while keeping the mapping stable for every image. The matrix is a simple visual correction rather than a calibrated recovery of the original filter responses.</p>
+
+  <h2>Final Results</h2>
+  <p>These images use the complete pipeline: gradient-feature pyramid alignment, automatic overlap and border cropping, gray-world white balance, color mapping, and percentile contrast.</p>
+  <div class="grid">
+    <figure><img src="images/final/cathedral_last.jpg" alt="Final cathedral"><figcaption>Cathedral</figcaption></figure>
+    <figure><img src="images/final/monastery_last.jpg" alt="Final monastery"><figcaption>Monastery</figcaption></figure>
+    <figure><img src="images/final/tobolsk_last.jpg" alt="Final Tobolsk"><figcaption>Tobolsk</figcaption></figure>
+    <figure><img src="images/final/church_last.jpg" alt="Final church"><figcaption>Church</figcaption></figure>
+    <figure><img src="images/final/emir_last.jpg" alt="Final Emir"><figcaption>Emir</figcaption></figure>
+    <figure><img src="images/final/harvesters_last.jpg" alt="Final harvesters"><figcaption>Harvesters</figcaption></figure>
+    <figure><img src="images/final/icon_last.jpg" alt="Final icon"><figcaption>Icon</figcaption></figure>
+    <figure><img src="images/final/ilemselga_last.jpg" alt="Final Ilemeselga"><figcaption>Ilemselga</figcaption></figure>
+    <figure><img src="images/final/melons_last.jpg" alt="Final melons"><figcaption>Melons</figcaption></figure>
+    <figure><img src="images/final/religous_painting_last.jpg" alt="Final religious painting"><figcaption>Religious painting</figcaption></figure>
+    <figure><img src="images/final/self_portrait_last.jpg" alt="Final self portrait"><figcaption>Self portrait</figcaption></figure>
+    <figure><img src="images/final/siren_last.jpg" alt="Final siren"><figcaption>Siren</figcaption></figure>
+    <figure><img src="images/final/three_generations_last.jpg" alt="Final three generations"><figcaption>Three generations</figcaption></figure>
+    <figure><img src="images/final/wharf_last.jpg" alt="Final wharf"><figcaption>Wharf</figcaption></figure>
+    <figure><img src="images/final/collection1_last.jpg" alt="Final additional bridge"><figcaption>Collection 1</figcaption></figure>
+    <figure><img src="images/final/collection2_last.jpg" alt="Final additional waterscape"><figcaption>Collection 2</figcaption></figure>
+    <figure><img src="images/final/collection3_last.jpg" alt="Final additional church landscape"><figcaption>Collection 3</figcaption></figure>
+  </div>
 
   <h2>Limitations</h2>
   <p>A single translation cannot correct motion between the three exposures, so moving people, foliage, and water may retain local ghosting. Border detection also leaves some colored bands when their values are not sufficiently dark or bright. Gray-world white balance depends on the scene's average color and therefore gives mixed results. Despite these limitations, the edge-based pyramid produces stable global alignment across the provided images and three additional scans.</p>

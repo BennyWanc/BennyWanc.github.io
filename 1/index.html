@@ -80,7 +80,7 @@
   <p>Each picture contains three grayscale exposures in B, G, R order. I held blue fixed, aligned green and red to blue, and stacked the aligned channels into an RGB image. The movement below use <code>(x, y)</code>, which means  x and  y moves for x,y axis.</p>
 
   <h2>Single-scale alignment</h2>
-  <p>For the small JPEGs, I searched translations in a 31×31 window centered at (0, 0). For every photo, I shifted the channel with <code>np.roll</code>, ignored the outer image area, and measured normalized cross-correlation (NCC). The candidate with the highest NCC was selected.</p>
+  <p>For the small JPEGs, I searched translations in a 31×31 window centered at (0, 0). For every photo, I shifted the channel with <code>np.roll</code>, ignored the outer boundry problem, and used normalized cross-correlation (NCC). The candidate with the highest NCC was selected.</p>
   <div class="grid">
     <figure><img src="images/Original/cathedral_aligned.jpg" alt="Colorized cathedral"><figcaption>Cathedral — G (2, 5), R (3, 12)</figcaption></figure>
     <figure><img src="images/Original/monastery_aligned.jpg" alt="Colorized monastery"><figcaption>Monastery — G (2, −3), R (2, 3)</figcaption></figure>
@@ -88,7 +88,7 @@
   </div>
 
   <h2>Multi-scale pyramid</h2>
-  <p>Searching the full shifting range on large TIFFs would be hard and time consuming. I resized each channel by half until its largest dimension is at most 400 pixels. I search ±15 pixels at the coarsest level, double that displacement at each finer level, and refine it within ±2 pixels. The TIFF results take about four seconds each on my machine.</p>
+  <p>Searching the shifting range on large TIFFs would be hard and time consuming. I resized each channel by half until its largest dimension is at most 400 pixels. I search ±15 pixels at the coarsest level, double that displacement at each finer level, and refine it within ±2 pixels. The TIFF results take about four seconds each on my machine.</p>
   <div class="grid">
     <figure><img src="images/pyramid/church_ncc.jpg" alt="Church pyramid result"><figcaption>Church — G (4, 25), R (−4, 58)</figcaption></figure>
     <figure><img src="images/pyramid/emir_ncc.jpg" alt="Emir pyramid result"><figcaption>Emir — G (24, 49), R (56, 104)</figcaption></figure>
@@ -104,24 +104,23 @@
   </div>
 
   <h2>Additional collection images</h2>
-  <p>I selected three additional full glass-plate scans from the Prokudin-Gorskii collection and processed them with the same fixed parameters.</p>
+  <p>I selected three additional pictures from the Prokudin-Gorskii collection.</p>
   <div class="grid">
     <figure><img src="images/pyramid/collection1_aligned.jpg" alt="Additional collection bridge"><figcaption>Collection 1 (bridge) — G (−11, 12), R (4, 68)</figcaption></figure>
     <figure><img src="images/pyramid/collection2_aligned.jpg" alt="Additional collection waterscape"><figcaption>Collection 2 (waterscape) — G (13, −19), R (25, 80)</figcaption></figure>
     <figure><img src="images/pyramid/collection3_aligned.jpg" alt="Additional collection church landscape"><figcaption>Collection 3 (church landscape) — G (16, 85), R (17, 172)</figcaption></figure>
   </div>
-  <p class="note"><strong>Before submitting:</strong> replace “Collection 1/2/3” with the Library of Congress titles and add each item-page link.</p>
 
   <h2>CS280A bells and whistles</h2>
   <h3>Better features</h3>
-  <p>Raw pixels are unreliable when the same material has very different brightness through different filters. I compute gradient magnitude, √(dx²+dy²), and align those edge images with NCC. The shifts are then applied to the original channels. This substantially improved Emir: its robe, face, and architectural edges overlap more closely.</p>
+  <p>There are some problem with original shifting on Emir. I compute gradient magnitude, √(dx²+dy²), and align edge images with NCC. This substantially improved Emir.</p>
   <div class="grid two">
     <figure><img src="images/comparisons/emir_ncc.jpg" alt="Emir aligned using raw pixels"><figcaption>Raw-pixel NCC</figcaption></figure>
     <figure><img src="images/comparisons/emir_edges.jpg" alt="Emir aligned using gradients"><figcaption>Gradient-feature NCC</figcaption></figure>
   </div>
 
   <h3>Automatic cropping</h3>
-  <p>I first use the measured shifts to retain only the region shared by all three aligned channels. Within the outer 15% of the image, I mark dark pixels, bright pixels, and pixels with a large difference between color channels as likely border artifacts. I crop through the last suspicious row or column when more than 35% of it is marked. This detects the actual scan borders instead of removing a fixed margin.</p>
+  <p>I first use the measured shifts to cut only the region that not shared by all three aligned channels. But the colored bpoarder re-exist. Then I choose to search outer 15% of the image, to mark dark pixels, bright pixels, I crop through the last row or column when more than 35% of it is marked.</p>
   <div class="grid two">
     <figure><img src="images/middle/collection1_final.jpg" alt="Collection 1 before improved automatic crop"><figcaption>Collection 1 — previous crop</figcaption></figure>
     <figure><img src="images/final/collection1_last.jpg" alt="Collection 1 after improved automatic crop"><figcaption>Collection 1 — improved crop</figcaption></figure>
@@ -130,19 +129,27 @@
     <figure><img src="images/middle/collection3_final.jpg" alt="Collection 3 before improved automatic crop"><figcaption>Collection 3 — previous crop</figcaption></figure>
     <figure><img src="images/final/collection3_last.jpg" alt="Collection 3 after improved automatic crop"><figcaption>Collection 3 — improved crop</figcaption></figure>
   </div>
+  <p> There might be larger percent of colored pixels to cut. But I thought it will cut too much if enlarge the percentage. So this improved crop is kept.</p>
 
   <h3>Automatic contrast</h3>
-  <p>I map the 0.5th intensity percentile to black and the 99.5th percentile to white, clipping values outside that range. Percentiles prevent a few defects or scan-border pixels from controlling the entire contrast stretch.</p>
+  <p>I map the 0.5th intensity percentile to black and the 99.5th percentile to white, clipping values outside that range. Percentiles prevent a few scan-border pixels from controlling the entire contrast stretch.</p>
+  <div class="grid two">
+    <figure><img src="images/comparisons/icon_contrast_before.jpg" alt="Icon before automatic contrast"><figcaption>Before automatic contrast</figcaption></figure>
+    <figure><img src="images/comparisons/icon_contrast_after.jpg" alt="Icon after automatic contrast"><figcaption>After automatic contrast</figcaption></figure>
+  </div>
 
   <h3>Automatic white balance</h3>
-  <p>I use the gray-world assumption: the average scene color estimates the illuminant. Each channel is scaled toward the shared mean, using half of the full correction to avoid overly aggressive casts. It helps some scenes, such as Icon, but can make Emir slightly greener because its scene average is not neutral.</p>
-  <figure><img src="images/comparisons/wb_comparison.jpg" alt="White balance comparisons"><figcaption>Left: no white balance. Right: 50% gray-world white balance.</figcaption></figure>
+  <p>I use the gray-world assumption: the average scene color estimates the illuminant. Each channel is scaled toward the shared mean, using half of the full correction to avoid aggressive casts. It helps some scenes, such as Icon, but can make Emir slightly greener because its scene average is not neutral. But overall, I think it is improvement.</p>
+  <div class="grid two">
+    <figure><img src="images/comparisons/icon_wb_before.jpg" alt="Icon before automatic white balance"><figcaption>Before white balance</figcaption></figure>
+    <figure><img src="images/comparisons/icon_wb_after.jpg" alt="Icon after automatic white balance"><figcaption>After 50% gray-world white balance</figcaption></figure>
+  </div>
 
   <h3>Better color mapping</h3>
-  <p>The historical glass-plate filters do not exactly match modern RGB channels, so I apply a small 3×3 linear color transformation. Each output channel keeps most of its original value, receives a slight boost, and subtracts a small contribution from the other two channels. This gently separates the colors while keeping the mapping stable for every image. The matrix is a simple visual correction rather than a calibrated recovery of the original filter responses.</p>
+  <p>I apply a small 3×3 linear color transformation. Each output channel keeps most of its original value, receives a small boost, and subtracts a small contribution from the other two channels. The matrix is a simple visual correction rather than a recovery of the original filter responses.</p>
 
   <h2>Final Results</h2>
-  <p>These images use the complete pipeline: gradient-feature pyramid alignment, automatic overlap and border cropping, gray-world white balance, color mapping, and percentile contrast.</p>
+  <p>These images use the complete pipeline: gradient-feature pyramid alignment, automatic cropping, auto white balance, color mapping, and percentile contrast.</p>
   <div class="grid">
     <figure><img src="images/final/cathedral_last.jpg" alt="Final cathedral"><figcaption>Cathedral</figcaption></figure>
     <figure><img src="images/final/monastery_last.jpg" alt="Final monastery"><figcaption>Monastery</figcaption></figure>
@@ -163,7 +170,5 @@
     <figure><img src="images/final/collection3_last.jpg" alt="Final additional church landscape"><figcaption>Collection 3</figcaption></figure>
   </div>
 
-  <h2>Limitations</h2>
-  <p>A single translation cannot correct motion between the three exposures, so moving people, foliage, and water may retain local ghosting. Border detection also leaves some colored bands when their values are not sufficiently dark or bright. Gray-world white balance depends on the scene's average color and therefore gives mixed results. Despite these limitations, the edge-based pyramid produces stable global alignment across the provided images and three additional scans.</p>
 </main></body>
 </html>

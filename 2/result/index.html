@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 2 — Fun with Filters and Frequencies</title>
+    <style>
+      body {
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 0 20px;
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+      }
+
+      h1, .lead {
+        text-align: center;
+      }
+
+      section {
+        margin-top: 60px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+
+      .grid.two {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      figure {
+        margin: 24px 0;
+        min-width: 0;
+      }
+
+      img {
+        width: 100%;
+        height: auto;
+      }
+
+      figcaption {
+        margin-top: 8px;
+        text-align: center;
+      }
+
+      .single {
+        max-width: 500px;
+        margin: 24px auto;
+      }
+
+      .small {
+        width: 120px;
+        margin: 24px auto;
+      }
+
+      code, pre {
+        background: #eee;
+      }
+
+      code {
+        padding: 2px 4px;
+      }
+
+      pre {
+        padding: 16px;
+        overflow-x: auto;
+      }
+
+      pre code {
+        padding: 0;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th, td {
+        padding: 8px;
+        border-bottom: 1px solid #ddd;
+        text-align: left;
+      }
+
+      .table-scroll {
+        overflow-x: auto;
+      }
+
+      @media (max-width: 600px) {
+        .grid, .grid.two {
+          display: block;
+        }
+      }
+
+      @media print {
+        figure, pre {
+          break-inside: avoid;
+        }
+
+        pre {
+          white-space: pre-wrap;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a href="../../index.html">← Back to portfolio</a>
+
+      <h1>Fun with Filters and Frequencies</h1>
+      <p class="lead">CS280A Project 2</p>
+      <p>Click any figure to view it at full.</p>
+
+      <section id="part11">
+        <h2>Part 1.1: Convolutions from Scratch</h2>
+        <p>I wrote convolution with four loops, then used NumPy multiplication and summation to reduce it to two loops. Both versions flip the filter and use zero padding to keep the image size.</p>
+        <p>I converted my selfie to grayscale [0, 1] and resized it to at most 384 pixels per side. I applied a 9×9 box filter and the x/y difference filters.</p>
+        <figure>
+          <a href="part1/selfie.png">
+            <img src="part1/selfie.png" width="1920" height="480" alt="Original grayscale selfie, 9×9 box blur, x derivative, and y derivative.">
+          </a>
+          <figcaption>Original grayscale selfie, 9×9 box blur, x derivative, and y derivative.</figcaption>
+        </figure>
+        <h3>Comparison with SciPy</h3>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Filter</th>
+                <th scope="col">Four loops</th>
+                <th scope="col">Two loops</th>
+                <th scope="col">SciPy</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>9×9 box</td>
+                <td>2.684 s</td>
+                <td>0.247 s</td>
+                <td>0.0117 s</td>
+              </tr>
+              <tr>
+                <td>Dx</td>
+                <td>0.0816 s</td>
+                <td>0.2241 s</td>
+                <td>0.0009 s</td>
+              </tr>
+              <tr>
+                <td>Dy</td>
+                <td>0.0897 s</td>
+                <td>0.2199 s</td>
+                <td>0.0009 s</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Two loops were faster for the box filter but slower for the tiny derivative filters because of NumPy overhead. SciPy was fastest.</p>
+      </section>
+
+      <section id="part12">
+        <h2>Part 1.2: Finite Difference Operator</h2>
+        <p>I convolved the cameraman image with Dx and Dy, then combined the derivatives into gradient magnitude. A threshold turns this into a binary edge image.</p>
+        <p>Gx = I ∗ Dx &nbsp; · &nbsp; Gy = I ∗ Dy &nbsp; · &nbsp; magnitude = √(Gx² + Gy²)</p>
+        <figure>
+          <a href="part1/finite_difference.png">
+            <img src="part1/finite_difference.png" width="2400" height="480" alt="Cameraman, signed x/y derivatives, gradient magnitude, and edges at threshold 0.18.">
+          </a>
+          <figcaption>Cameraman, signed x/y derivatives, gradient magnitude, and edges at threshold 0.18.</figcaption>
+        </figure>
+        <figure>
+          <a href="part1/raw_thresholds.png">
+            <img src="part1/raw_thresholds.png" width="1440" height="480" alt="Finite-difference threshold comparison: 0.10, 0.18, and 0.25.">
+          </a>
+          <figcaption>Finite-difference threshold comparison: 0.10, 0.18, and 0.25.</figcaption>
+        </figure>
+        <p>I chose 0.18 to keep the body and gesture of cameraman</p>
+      </section>
+
+      <section id="part13">
+        <h2>Part 1.3: Derivative of Gaussian</h2>
+        <p>I used <code>cv2.getGaussianKernel(13, 2.0)</code> and an outer product to construct a 13×13 Gaussian. First I blurred the cameraman, then applied Dx and Dy again.</p>
+        <figure>
+          <a href="part1/smoothed.png">
+            <img src="part1/smoothed.png" width="1440" height="480" alt="Gaussian blur (σ = 2), smoothed gradient magnitude, and thresholded edges at 0.065.">
+          </a>
+          <figcaption>Gaussian blur (σ = 2), smoothed gradient magnitude, and thresholded edges at 0.065.</figcaption>
+        </figure>
+        <figure>
+          <a href="part1/smoothed_derivatives.png">
+            <img src="part1/smoothed_derivatives.png" width="960" height="480" alt="The x and y derivatives after Gaussian smoothing.">
+          </a>
+          <figcaption>The x and y derivatives after Gaussian smoothing.</figcaption>
+        </figure>
+        <figure>
+          <a href="part1/smooth_thresholds.png">
+            <img src="part1/smooth_thresholds.png" width="1440" height="480" alt="Smoothed-gradient threshold comparison: 0.035, 0.065, and 0.10.">
+          </a>
+          <figcaption>Smoothed-gradient threshold comparison: 0.035, 0.065, and 0.10.</figcaption>
+        </figure>
+        <p> I chose 0.065 as the middle value which looks great.</p>
+        <h3>Combining the two filters</h3>
+        <p>I convolved the Gaussian with Dx and Dy in <code>full</code> mode.</p>
+        <figure>
+          <a href="part1/dog_filters.png">
+            <img src="part1/dog_filters.png" width="960" height="480" alt="Derivative-of-Gaussian filters in x and y. Dark and bright regions represent opposite signs.">
+          </a>
+          <figcaption>Derivative-of-Gaussian filters in x and y. Dark and bright regions represent opposite signs.</figcaption>
+        </figure>
+        <figure>
+          <a href="part1/dog_comparison.png">
+            <img src="part1/dog_comparison.png" width="960" height="480" alt="Gradient magnitudes from sequential blur/differentiation and the combined DoG filters.">
+          </a>
+          <figcaption>Gradient magnitudes from sequential blur/differentiation and the combined DoG filters.</figcaption>
+        </figure>
+        <h3>CS280A: Gradient orientations in HSV</h3>
+        <p>I compared each gradient with 360 unit directions and chose the largest dot product.</p>
+        <figure class="single">
+          <a href="part1/orientation.png">
+            <img src="part1/orientation.png" width="480" height="480" alt="HSV gradient orientation: hue encodes direction and brightness encodes edge strength.">
+          </a>
+          <figcaption>HSV gradient orientation: hue encodes direction and brightness encodes edge strength.</figcaption>
+        </figure>
+        <p>Here x points right and y points down.</p>
+      </section>
+
+      <section id="part21">
+        <h2>Part 2.1: Image Sharpening</h2>
+        <p>A Gaussian blur keeps low frequencies. Subtracting it from the image isolates high-frequency detail, which I add back with strength α. I used a 13×13 Gaussian with σ = 2 and symmetric boundaries.</p>
+        <figure>
+          <a href="part2/taj_sharpening.png">
+            <img src="part2/taj_sharpening.png" width="1920" height="600" alt="Taj Mahal: original, blur, high-frequency component shifted by 0.5 for display, and sharpening with α = 1.">
+          </a>
+          <figcaption>Taj Mahal: original, blur, high-frequency component shifted by 0.5 for display, and sharpening with α = 1.</figcaption>
+        </figure>
+        <figure>
+          <a href="part2/taj_amounts.png">
+            <img src="part2/taj_amounts.png" width="1920" height="600" alt="Taj Mahal sharpening amounts: α = 0, 0.5, 1, and 2.">
+          </a>
+          <figcaption>Taj Mahal sharpening amounts: α = 0, 0.5, 1, and 2.</figcaption>
+        </figure>
+        <figure>
+          <a href="part2/photo1_sharpening.png">
+            <img src="part2/photo1_sharpening.png" width="1920" height="600" alt="My landscape photo: original, blur, high-frequency component, and sharpening with α = 1.">
+          </a>
+          <figcaption>My landscape photo: original, blur, high-frequency component, and sharpening with α = 1.</figcaption>
+        </figure>
+        <figure>
+          <a href="part2/photo1_amounts.png">
+            <img src="part2/photo1_amounts.png" width="1920" height="600" alt="The same sharpening amounts applied to the landscape.">
+          </a>
+          <figcaption>The same sharpening amounts applied to the landscape.</figcaption>
+        </figure>
+        <p>Larger α strengthens details but also noise and halos. I chose α = 1 for a moderate sharpening effect.</p>
+        <h3>Blur, then sharpen again</h3>
+        <figure>
+          <a href="part2/blur_then_sharpen.png">
+            <img src="part2/blur_then_sharpen.png" width="1440" height="600" alt="Detailed landscape, deliberately blurred version, and re-sharpened result with α = 1.">
+          </a>
+          <figcaption>Detailed landscape, deliberately blurred version, and re-sharpened result with α = 1.</figcaption>
+        </figure>
+        <p>Sharpening restores some edge contrast, but cannot recover the fine windows, foliage, and water texture lost during blur.</p>
+      </section>
+
+      <section id="part22">
+        <h2>Part 2.2: Hybrid Images</h2>
+        <p>High-frequency details dominate up close. The low-frequency image becomes clearer from farther away.</p>
+        <p>I resized RGB inputs to at most 800 pixels per side and clicked matching eye centers with the supplied alignment helper. It adjusts position, scale, and rotation. Black areas are padding.</p>
+        <h3>Derek and Nutmeg: complete process</h3>
+        <div class="grid two">
+          <figure>
+            <a href="hybrids/derek_nutmeg_original_high.png">
+              <img src="hybrids/derek_nutmeg_original_high.png" width="800" height="600" alt="Original Nutmeg: high-frequency source.">
+            </a>
+            <figcaption>Original Nutmeg: high-frequency source.</figcaption>
+          </figure>
+          <figure>
+            <a href="hybrids/derek_nutmeg_original_low.png">
+              <img src="hybrids/derek_nutmeg_original_low.png" width="572" height="800" alt="Original Derek: low-frequency source.">
+            </a>
+            <figcaption>Original Derek: low-frequency source.</figcaption>
+          </figure>
+        </div>
+        <figure>
+          <a href="hybrids/derek_nutmeg_process.png">
+            <img src="hybrids/derek_nutmeg_process.png" width="3000" height="750" alt="Aligned Nutmeg and Derek, signed high frequencies shown around gray, low frequencies, and the hybrid.">
+          </a>
+          <figcaption>Aligned Nutmeg and Derek, signed high frequencies shown around gray, low frequencies, and the hybrid.</figcaption>
+        </figure>
+        <div class="grid two">
+          <figure>
+            <a href="hybrids/derek_nutmeg_hybrid.png">
+              <img src="hybrids/derek_nutmeg_hybrid.png" width="490" height="835" alt="Larger view: Nutmeg’s detailed features are prominent.">
+            </a>
+            <figcaption>Larger view: Nutmeg’s detailed features are prominent.</figcaption>
+          </figure>
+          <figure class="small">
+            <a href="hybrids/derek_nutmeg_hybrid.png">
+              <img src="hybrids/derek_nutmeg_hybrid.png" width="490" height="835" alt="Small view: inspect the broad face structure from farther away.">
+            </a>
+            <figcaption>Small view: inspect the broad face structure from farther away.</figcaption>
+          </figure>
+        </div>
+        <h3>Frequency analysis</h3>
+        <p>For the Fourier plots, I use grayscale. I use signed high frequencies and the unclipped hybrid, without display offsets.</p>
+        <figure>
+          <a href="hybrids/derek_nutmeg_fourier.png">
+            <img src="hybrids/derek_nutmeg_fourier.png" width="3000" height="750" alt="Log Fourier magnitudes: aligned high source, aligned low source, high-pass, low-pass, and hybrid.">
+          </a>
+        </figure>
+        <p>Low-pass energy is concentrated near the center</p>
+        <h3>Two custom pairs</h3>
+        <p>Both custom pairs use σhigh = σlow = 6: lion detail over my portrait, and tiger detail over Einstein.</p>
+        <div class="grid">
+          <figure>
+            <a href="hybrids/selfies_lion_original_high.png">
+              <img src="hybrids/selfies_lion_original_high.png" width="459" height="612" alt="Lion: original high-frequency source.">
+            </a>
+            <figcaption>Lion: original high-frequency source.</figcaption>
+          </figure>
+          <figure>
+            <a href="hybrids/selfies_lion_original_low.png">
+              <img src="hybrids/selfies_lion_original_low.png" width="600" height="800" alt="My portrait: original low-frequency source.">
+            </a>
+            <figcaption>My portrait: original low-frequency source.</figcaption>
+          </figure>
+          <figure>
+            <a href="hybrids/selfies_lion_hybrid.png">
+              <img src="hybrids/selfies_lion_hybrid.png" width="465" height="745" alt="Lion + My portrait: final hybrid.">
+            </a>
+            <figcaption>Lion + My portrait: final hybrid.</figcaption>
+          </figure>
+        </div>
+        <div class="grid">
+          <figure>
+            <a href="hybrids/einstein_tiger_original_high.png">
+              <img src="hybrids/einstein_tiger_original_high.png" width="800" height="533" alt="Tiger: original high-frequency source.">
+            </a>
+            <figcaption>Tiger: original high-frequency source.</figcaption>
+          </figure>
+          <figure>
+            <a href="hybrids/einstein_tiger_original_low.png">
+              <img src="hybrids/einstein_tiger_original_low.png" width="654" height="800" alt="Einstein: original low-frequency source.">
+            </a>
+            <figcaption>Einstein: original low-frequency source.</figcaption>
+          </figure>
+          <figure>
+            <a href="hybrids/einstein_tiger_hybrid.png">
+              <img src="hybrids/einstein_tiger_hybrid.png" width="497" height="733" alt="Tiger + Einstein: final hybrid.">
+            </a>
+            <figcaption>Tiger + Einstein: final hybrid.</figcaption>
+          </figure>
+        </div>
+        <h3>CS280A: Where should color go?</h3>
+        <p>I compared color in the high-frequency component only, low-frequency component only, and both. The other component is converted to grayscale before addition.</p>
+        <figure>
+          <a href="hybrids/derek_nutmeg_color_comparison.png">
+            <img src="hybrids/derek_nutmeg_color_comparison.png" width="1800" height="750" alt="Derek/Nutmeg: color in high only, low only, and both.">
+          </a>
+          <figcaption>Derek/Nutmeg: color in high only, low only, and both.</figcaption>
+        </figure>
+        <figure>
+          <a href="hybrids/selfies_lion_color_comparison.png">
+            <img src="hybrids/selfies_lion_color_comparison.png" width="1800" height="750" alt="Selfie/lion: color in high only, low only, and both.">
+          </a>
+          <figcaption>Selfie/lion: color in high only, low only, and both.</figcaption>
+        </figure>
+        <figure>
+          <a href="hybrids/einstein_tiger_color_comparison.png">
+            <img src="hybrids/einstein_tiger_color_comparison.png" width="1800" height="750" alt="Einstein/tiger: color in high only, low only, and both.">
+          </a>
+          <figcaption>Einstein/tiger: color in high only, low only, and both.</figcaption>
+        </figure>
+      <p> seems color can go for both frequency to improve effect.</p>
+      </section>
+
+      <section id="part23">
+        <h2>Part 2.3: Gaussian and Laplacian Stacks</h2>
+        <p>I built six levels without built-in pyramid functions. G0 is the original. each next level blurs the previous one with σ = 2, 4, 8, 16, then 32.</p>
+        <p>The last level keeps the remaining low frequencies.</p>
+        <figure>
+          <a href="blending/oraple_a_gaussian.png">
+            <img src="blending/oraple_a_gaussian.png" width="2160" height="420" alt="Apple Gaussian stack: original through progressively stronger blur.">
+          </a>
+          <figcaption>Apple Gaussian stack: original through progressively stronger blur.</figcaption>
+        </figure>
+        <figure>
+          <a href="blending/oraple_a_laplacian.png">
+            <img src="blending/oraple_a_laplacian.png" width="2160" height="420" alt="Apple Laplacian stack: detail bands at levels 0–4 and the low-frequency residual at level 5.">
+          </a>
+          <figcaption>Apple Laplacian stack: detail bands at levels 0–4 and the low-frequency residual at level 5.</figcaption>
+        </figure>
+        <figure>
+          <a href="blending/oraple_b_gaussian.png">
+            <img src="blending/oraple_b_gaussian.png" width="2160" height="420" alt="Orange Gaussian stack: original through progressively stronger blur.">
+          </a>
+          <figcaption>Orange Gaussian stack: original through progressively stronger blur.</figcaption>
+        </figure>
+        <figure>
+          <a href="blending/oraple_b_laplacian.png">
+            <img src="blending/oraple_b_laplacian.png" width="2160" height="420" alt="Orange Laplacian stack: detail bands at levels 0–4 and the low-frequency residual at level 5.">
+          </a>
+          <figcaption>Orange Laplacian stack: detail bands at levels 0–4 and the low-frequency residual at level 5.</figcaption>
+        </figure>
+      </section>
+
+      <section id="part24">
+        <h2>Part 2.4: Multiresolution Blending</h2>
+        <p>I build a Gaussian stack for the mask and Laplacian stacks for both RGB images. White selects image A, black selects image B.</p>
+        <p>Fine details use a narrow transition, and broad colors use a wider one. </p>
+        <h3>Apple + orange</h3>
+        <figure>
+          <a href="blending/oraple_comparison.png">
+            <img src="blending/oraple_comparison.png" width="1800" height="420" alt="Apple, orange, vertical mask, direct cut, and multiresolution blend.">
+          </a>
+          <figcaption>Apple, orange, vertical mask, direct cut, and multiresolution blend.</figcaption>
+        </figure>
+        <figure>
+          <a href="blending/oraple_mask_stack.png">
+            <img src="blending/oraple_mask_stack.png" width="2160" height="420" alt="The vertical step mask becomes smoother at higher Gaussian levels.">
+          </a>
+          <figcaption>The vertical step mask becomes smoother at higher Gaussian levels.</figcaption>
+        </figure>
+        <figure>
+          <a href="blending/oraple_process.png">
+            <img src="blending/oraple_process.png" width="1200" height="1440" alt="Figure 3.42 layout: masked apple, masked orange, and their sum at levels 0, 2, and 4; bottom row sums all six levels (a–l).">
+          </a>
+          <figcaption>Figure 3.42 layout: masked apple, masked orange, and their sum at levels 0, 2, and 4; bottom row sums all six levels (a–l).</figcaption>
+        </figure>
+        <h3>Custom blend 1: Tiger face inside a lion’s mane</h3>
+        <p>After aligning the eyes, I made a circular mask around the tiger’s face. It selects tiger inside and lion outside, excluding most of the tiger’s background.</p>
+        <figure>
+          <a href="blending/tiger_lion_comparison.png">
+            <img src="blending/tiger_lion_comparison.png" width="1800" height="420" alt="Aligned tiger and lion, circular mask, direct cut, and blended result.">
+          </a>
+          <figcaption>Aligned tiger and lion, circular mask, direct cut, and blended result.</figcaption>
+        </figure>
+        <figure class="single">
+          <a href="blending/tiger_lion.png">
+            <img src="blending/tiger_lion.png" width="139" height="222" alt="Tiger/lion: fine tiger markings inside the lion’s mane.">
+          </a>
+          <figcaption>"Tion"</figcaption>
+        </figure>
+        <p>Blending softens the circular edge.</p>
+        <h3>Custom blend 2: Galaxy through a window</h3>
+        <p>I resized the galaxy to match the window and clicked the four inner corners for a polygon mask. Galaxy appears inside and the window stays outside.</p>
+        <figure>
+          <a href="blending/galaxy_window_comparison.png">
+            <img src="blending/galaxy_window_comparison.png" width="1800" height="420" alt="Galaxy, window, polygon mask, direct cut, and blended result.">
+          </a>
+          <figcaption>Galaxy, window, polygon mask, direct cut, and blended result.</figcaption>
+        </figure>
+        <figure class="single">
+          <a href="blending/galaxy_window.png">
+            <img src="blending/galaxy_window.png" width="400" height="397" alt="Galaxy/window: stars replace the dark opening.">
+          </a>
+          <figcaption>Galaxy/window: stars replace the dark opening.</figcaption>
+        </figure>
+        <p>Procedure</p>
+        <figure>
+          <a href="blending/galaxy_window_mask_stack.png">
+            <img src="blending/galaxy_window_mask_stack.png" width="2160" height="420" alt="Gaussian mask stack for the window opening.">
+          </a>
+          <figcaption>Gaussian mask stack for the window opening.</figcaption>
+        </figure>
+        <figure>
+          <a href="blending/galaxy_window_process.png">
+            <img src="blending/galaxy_window_process.png" width="1200" height="1440" alt="Masked galaxy and window contributions, combined bands, and reconstruction from all levels.">
+          </a>
+          <figcaption>Masked galaxy and window contributions, combined bands, and reconstruction from all levels.</figcaption>
+        </figure>
+        <h3>CS280A: Color blending</h3>
+        <p>I apply the same mask to the red, green, and blue channels separately. Below, I compare the RGB blends with grayscale versions.</p>
+        <figure>
+          <a href="blending/oraple_color.png">
+            <img src="blending/oraple_color.png" width="720" height="420" alt="Apple/orange: grayscale and RGB blend.">
+          </a>
+          <figcaption>Apple/orange: grayscale and RGB blend.</figcaption>
+        </figure>
+        <figure>
+          <a href="blending/tiger_lion_color.png">
+            <img src="blending/tiger_lion_color.png" width="720" height="420" alt="Tiger/lion: grayscale and RGB blend.">
+          </a>
+          <figcaption>Tiger/lion: grayscale and RGB blend.</figcaption>
+        </figure>
+        <figure>
+          <a href="blending/galaxy_window_color.png">
+            <img src="blending/galaxy_window_color.png" width="720" height="420" alt="Galaxy/window: grayscale and RGB blend.">
+          </a>
+          <figcaption>Galaxy/window: grayscale and RGB blend.</figcaption>
+        </figure>
+      </section>
+
+    </main>
+  </body>
+</html>

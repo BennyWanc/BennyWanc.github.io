@@ -116,6 +116,36 @@
       <section id="part11">
         <h2>Part 1.1: Convolutions from Scratch</h2>
         <p>I wrote convolution with four loops, then used NumPy multiplication and summation to reduce it to two loops. Both versions flip the filter and use zero padding to keep the image size.</p>
+        <pre><code>def convolve_four_loops(image, kernel):
+    h, w = image.shape
+    kh, kw = kernel.shape
+    # adds zeros around the image
+    padded = np.pad(image, ((kh // 2, (kh - 1) // 2),
+                            (kw // 2, (kw - 1) // 2)), mode = &#x27;constant&#x27;, constant_values = 0)
+    flipped = kernel[::-1, ::-1]  # Flip vertically and horizontally
+    result = np.zeros((h, w))
+    # select which pixels to calculate
+    for y in range(h):
+        for x in range(w):
+            # goes to every filter weight
+            for j in range(kh):
+                for i in range(kw):
+                    result[y, x] += padded[y + j, x + i] * flipped[j, i]
+    return result
+
+def convolve_two_loops(image, kernel):
+    h, w = image.shape
+    kh, kw = kernel.shape
+    padded = np.pad(image, ((kh // 2, (kh - 1) // 2),
+                            (kw // 2, (kw - 1) // 2)), mode=&#x27;constant&#x27;, constant_values=0)
+    flipped = kernel[::-1, ::-1]
+    result = np.zeros((h, w))
+    for y in range(h):
+        for x in range(w):
+            # selects a region with the same dimensions in kernel
+            patch = padded[y:y + kh, x:x + kw]
+            result[y, x] = np.sum(patch * flipped)  # Replace the two inner loops
+    return result</code></pre>
         <p>I converted my selfie to grayscale [0, 1] and resized it to at most 384 pixels per side. I applied a 9×9 box filter and the x/y difference filters.</p>
         <figure>
           <a href="part1/selfie.png">
@@ -491,6 +521,9 @@
           <figcaption>Galaxy/window: grayscale and RGB blend.</figcaption>
         </figure>
       </section>
+
+      <section>Reflection</section>
+      <p>The most important thing I learned is that different image frequencies capture different information: low frequencies show broad shapes and colors, while high frequencies show edges and fine details.</p>
 
     </main>
   </body>

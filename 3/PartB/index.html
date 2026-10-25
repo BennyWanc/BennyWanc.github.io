@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 3, Part B — Flow Matching from Scratch</title>
+    <style>
+      body {
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 0 20px;
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+      }
+
+      h1, .lead {
+        text-align: center;
+      }
+
+      section {
+        margin-top: 60px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+
+      .grid.two {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      figure {
+        margin: 24px 0;
+        min-width: 0;
+      }
+
+      img {
+        width: 100%;
+        height: auto;
+      }
+
+      figcaption {
+        margin-top: 8px;
+        text-align: center;
+      }
+
+      .single {
+        max-width: 500px;
+        margin: 24px auto;
+      }
+
+      .small {
+        width: 120px;
+        margin: 24px auto;
+      }
+
+      code, pre {
+        background: #eee;
+      }
+
+      code {
+        padding: 2px 4px;
+      }
+
+      pre {
+        padding: 16px;
+        overflow-x: auto;
+      }
+
+      pre code {
+        padding: 0;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th, td {
+        padding: 8px;
+        border-bottom: 1px solid #ddd;
+        text-align: left;
+      }
+
+      .table-scroll {
+        overflow-x: auto;
+      }
+
+      @media (max-width: 600px) {
+        .grid, .grid.two {
+          display: block;
+        }
+
+      }
+
+      @media print {
+        figure, pre {
+          break-inside: avoid;
+        }
+
+        pre {
+          white-space: pre-wrap;
+        }
+
+      }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <a href="../index.html">← Project 3 overview</a>
+      <h1>Flow Matching from Scratch</h1>
+      <p class="lead">CS280A Project 3 · Part B<br>Benny ChenYu Wan</p>
+      <p>I trained UNets on MNIST, starting with single-step denoising and then learning time-conditioned and class-conditioned flow models. Click any figure to view it at full size.</p>
+      <nav aria-label="Sections">
+        <a href="#unet">1. Denoising</a>
+        ·
+        <a href="#time-unet">2. Flow matching</a>
+        ·
+        <a href="#no-scheduler">No-scheduler comparison</a>
+        ·
+        <a href="#bonus">Bells &amp; Whistles</a>
+      </nav>
+
+      <section id="unet">
+        <h2>1.1 Implementing the UNet</h2>
+        <p>I built a UNet for 28 × 28 grayscale MNIST digits. The encoder reduces the spatial resolution from 28 × 28 to 14 × 14 and then 7 × 7. Average pooling produces a 1 × 1 bottleneck, and the decoder upsamples back to the original resolution. Skip connections concatenate encoder features with decoder features at matching resolutions.</p>
+        <p>Convolution blocks use batch normalization and GELU. Downsampling uses stride-2 convolutions; upsampling uses transposed convolutions. The final convolution returns one channel without clipping or a sigmoid. The denoising model uses hidden dimension D = 128.</p>
+        <pre><code>Encoder: 28 × 28 → 14 × 14 → 7 × 7 → 1 × 1
+Decoder:  1 × 1  →  7 × 7  → 14 × 14 → 28 × 28</code></pre>
+      </section>
+
+      <section id="noise">
+        <h2>1.2 Visualizing the Noising Process</h2>
+        <p>MNIST pixels are normalized to [0, 1]. I added Gaussian noise at seven strengths, keeping the test digit and noise tensor fixed so that only σ changes. Values are clipped only for display.</p>
+        <pre><code>noisy = clean + sigma * epsilon</code></pre>
+        <figure>
+          <a href="denoise_noise_levels.png">
+            <img src="denoise_noise_levels.png" width="2100" height="375" alt="The same test digit at σ = 0.0, 0.2, 0.4, 0.5, 0.6, 0.8, and 1.0.">
+          </a>
+          <figcaption>The same test digit at σ = 0.0, 0.2, 0.4, 0.5, 0.6, 0.8, and 1.0.</figcaption>
+        </figure>
+
+      </section>
+
+      <section id="denoising">
+        <h2>1.2.1 Training a Single-Step Denoiser</h2>
+        <p>I trained the UNet for 5 epochs with batch size 256, Adam learning rate 10⁻⁴, and noise level σ = 0.5. Each batch receives fresh independent noise. The target is the clean digit, and the objective is mean squared error.</p>
+        <pre><code>prediction = model(clean + 0.5 * torch.randn_like(clean))
+loss = F.mse_loss(prediction, clean)</code></pre>
+        <figure>
+          <a href="denoise_loss.png">
+            <img src="denoise_loss.png" width="960" height="360" alt="Single-step denoiser training loss. Blue shows batch losses; orange shows the moving average.">
+          </a>
+          <figcaption>Single-step denoiser training loss. Blue shows batch losses; orange shows the moving average.</figcaption>
+        </figure>
+
+        <p>The loss drops rapidly at the start and then decreases more slowly. This indicates that the network learns to recover the training digits from noisy inputs; visual testing below checks how this behavior changes with noise strength.</p>
+      </section>
+
+      <section id="ood">
+        <h2>1.2.2 Out-of-Distribution Testing</h2>
+        <p>I evaluated the trained model on the same held-out digit at seven noise levels. The middle column, σ = 0.5, matches training; the other levels test generalization. The underlying noise tensor is fixed across columns.</p>
+        <figure>
+          <a href="denoise_ood.png">
+            <img src="denoise_ood.png" width="2100" height="900" alt="Rows: original digit, noisy input, and denoised prediction. Columns vary σ from 0.0 to 1.0.">
+          </a>
+          <figcaption>Rows: original digit, noisy input, and denoised prediction. Columns vary σ from 0.0 to 1.0.</figcaption>
+        </figure>
+
+        <p>The 7 remains recognizable at low and moderate noise levels. At σ = 0.8 and 1.0, extra strokes and distortions appear. The network can handle some change in noise strength, but recovery becomes less reliable when the input is much noisier than the training condition.</p>
+      </section>
+
+      <section id="pure-noise">
+        <h2>1.2.3 Denoising Pure Noise</h2>
+        <p>I trained a fresh D = 128 UNet for 5 epochs using batch size 256 and Adam at 10⁻⁴. This time the input is pure Gaussian noise, independent of the clean target digit. I used the same evaluation noises at epochs 1 and 5.</p>
+        <pre><code>inputs = torch.randn_like(images)
+loss = F.mse_loss(pure_model(inputs), images)</code></pre>
+        <figure>
+          <a href="pure_noise_loss.png">
+            <img src="pure_noise_loss.png" width="960" height="360" alt="Training loss when the input noise is independent of the target digit.">
+          </a>
+          <figcaption>Training loss when the input noise is independent of the target digit.</figcaption>
+        </figure>
+
+        <figure>
+          <a href="pure_noise_epoch1.png">
+            <img src="pure_noise_epoch1.png" width="1440" height="276" alt="Epoch 1: fixed pure-noise inputs above their predictions.">
+          </a>
+          <figcaption>Epoch 1: fixed pure-noise inputs above their predictions.</figcaption>
+        </figure>
+
+        <figure>
+          <a href="pure_noise_epoch5.png">
+            <img src="pure_noise_epoch5.png" width="1440" height="276" alt="Epoch 5: the same inputs produce similar blurry digit averages.">
+          </a>
+          <figcaption>Epoch 5: the same inputs produce similar blurry digit averages.</figcaption>
+        </figure>
+
+        <p>Different noise inputs produce nearly identical blurry shapes rather than distinct digits. With MSE, the optimal prediction is the conditional mean of the target. Because the input and target are independent, that mean is the average training image. The overlapping strokes reflect common regions across MNIST digits.</p>
+      </section>
+
+      <section id="time-unet">
+        <h2>2.1 Time-Conditioned Flow Matching</h2>
+        <p>I added two fully connected blocks that embed time and multiply the decoder features after unflattening and after the first upsampling block. Each FCBlock is Linear → GELU → Linear. The hidden dimension is D = 64.</p>
+        <p>Training samples a clean image x₁, independent Gaussian noise x₀, and a continuous time t uniformly in [0, 1). The network predicts the path velocity x₁ − x₀, rather than the clean image or the noise.</p>
+        <pre><code>x_t = (1 - t) * x_0 + t * x_1
+target_velocity = x_1 - x_0
+loss = F.mse_loss(unet(x_t, t), target_velocity)</code></pre>
+      </section>
+
+      <section id="time-training">
+        <h2>2.2 Training the Time-Conditioned UNet</h2>
+        <p>I trained for 10 epochs with batch size 64 and Adam starting at 10⁻². An exponential scheduler multiplies the learning rate by 0.1^(1/10) after every epoch. Checkpoints were saved at epochs 1, 5, and 10.</p>
+        <figure>
+          <a href="time_conditioned_loss.png">
+            <img src="time_conditioned_loss.png" width="960" height="360" alt="Time-conditioned training loss over 10 epochs.">
+          </a>
+          <figcaption>Time-conditioned training loss over 10 epochs.</figcaption>
+        </figure>
+
+        <p>The initial loss spike falls quickly, followed by a much flatter training curve. The generated samples provide a clearer view of progress than the full-scale loss plot alone.</p>
+      </section>
+
+      <section id="time-sampling">
+        <h2>2.3 Sampling from the Time-Conditioned UNet</h2>
+        <p>I sampled from Gaussian noise using 50 Euler updates from t = 0 to t = 1. The same seeds, 180–189, are used for each checkpoint. These are unconditioned digit identities, so the row is not required to contain every digit.</p>
+        <pre><code>x = x + (1 / 50) * unet(x, t)</code></pre>
+        <figure>
+          <a href="time_samples_epoch1.png">
+            <img src="time_samples_epoch1.png" width="1440" height="240" alt="Time-only generation after epoch 1; matching seeds across checkpoints.">
+          </a>
+          <figcaption>Time-only generation after epoch 1; matching seeds across checkpoints.</figcaption>
+        </figure>
+
+        <figure>
+          <a href="time_samples_epoch5.png">
+            <img src="time_samples_epoch5.png" width="1440" height="240" alt="Time-only generation after epoch 5; matching seeds across checkpoints.">
+          </a>
+          <figcaption>Time-only generation after epoch 5; matching seeds across checkpoints.</figcaption>
+        </figure>
+
+        <figure>
+          <a href="time_samples_epoch10.png">
+            <img src="time_samples_epoch10.png" width="1440" height="240" alt="Time-only generation after epoch 10; matching seeds across checkpoints.">
+          </a>
+          <figcaption>Time-only generation after epoch 10; matching seeds across checkpoints.</figcaption>
+        </figure>
+
+        <p>Epoch 1 contains broken and ambiguous strokes. By epochs 5 and 10, more samples form recognizable digits and cleaner loops. Some remain ambiguous, and these ten samples do not cover all digit classes.</p>
+      </section>
+
+      <section id="class-unet">
+        <h2>2.4 Adding Class Conditioning</h2>
+        <p>I encoded each digit label as a ten-dimensional one-hot vector and embedded it with two additional FCBlocks. A mask zeros the one-hot vector with probability 0.1 during training, allowing the same network to make unconditional predictions.</p>
+        <pre><code>unflatten = class_embedding_1 * unflatten + time_embedding_1
+up1 = class_embedding_2 * up1 + time_embedding_2</code></pre>
+        <p>The interpolated input and velocity target are unchanged from time-only flow matching. Class conditioning supplies the additional information about which digit to generate.</p>
+      </section>
+
+      <section id="class-training">
+        <h2>2.5 Training the Class-Conditioned UNet</h2>
+        <p>I trained a fresh D = 64 model for 10 epochs, with batch size 64, class dropout probability 0.1, and Adam starting at 10⁻². The exponential scheduler again uses gamma = 0.1^(1/10).</p>
+        <figure>
+          <a href="class_loss.png">
+            <img src="class_loss.png" width="960" height="360" alt="Class-conditioned training loss with exponential learning-rate decay.">
+          </a>
+          <figcaption>Class-conditioned training loss with exponential learning-rate decay.</figcaption>
+        </figure>
+
+      </section>
+
+      <section id="class-sampling">
+        <h2>2.6 Class-Conditioned Sampling</h2>
+        <p>For each checkpoint, I generated four examples of every digit using 300 Euler steps and guidance scale γ = 5. The initial noise seed is fixed at 180. Each row contains labels 0–9.</p>
+        <pre><code>v_cfg = v_unconditional + 5 * (v_conditional - v_unconditional)</code></pre>
+        <p>This Part B guidance convention differs from Part A, which adds its guidance term to the conditional prediction.</p>
+        <figure>
+          <a href="class_samples_epoch1.png">
+            <img src="class_samples_epoch1.png" width="1440" height="552" alt="Scheduled class-conditioned model, epoch 1: four examples of each digit 0–9.">
+          </a>
+          <figcaption>Scheduled class-conditioned model, epoch 1: four examples of each digit 0–9.</figcaption>
+        </figure>
+
+        <figure>
+          <a href="class_samples_epoch5.png">
+            <img src="class_samples_epoch5.png" width="1440" height="552" alt="Scheduled class-conditioned model, epoch 5: four examples of each digit 0–9.">
+          </a>
+          <figcaption>Scheduled class-conditioned model, epoch 5: four examples of each digit 0–9.</figcaption>
+        </figure>
+
+        <figure>
+          <a href="class_samples_epoch10.png">
+            <img src="class_samples_epoch10.png" width="1440" height="552" alt="Scheduled class-conditioned model, epoch 10: four examples of each digit 0–9.">
+          </a>
+          <figcaption>Scheduled class-conditioned model, epoch 10: four examples of each digit 0–9.</figcaption>
+        </figure>
+
+        <p>Most requested digits are visible even after one epoch, although some 5s and other strokes are incomplete. At epoch 10, the digit rows are substantially cleaner and more consistent. Shapes still vary across the four instances of each class.</p>
+      </section>
+
+      <section id="no-scheduler">
+        <h2>Removing the Learning-Rate Scheduler</h2>
+        <p>I trained an independent model with the same architecture, batch size, class dropout, and 10-epoch budget, but removed the scheduler and used a constant Adam learning rate of 10⁻³. Both experiments reset the initialization seed and use the same data-loader seed. Sampling also uses the same labels and seed.</p>
+        <figure>
+          <a href="class_no_scheduler_loss.png">
+            <img src="class_no_scheduler_loss.png" width="960" height="360" alt="Training loss with a constant learning rate of 10⁻³.">
+          </a>
+          <figcaption>Training loss with a constant learning rate of 10⁻³.</figcaption>
+        </figure>
+
+        <figure>
+          <a href="class_no_scheduler_samples_epoch1.png">
+            <img src="class_no_scheduler_samples_epoch1.png" width="1440" height="552" alt="No-scheduler model, epoch 1: the same labels and initial noise as the scheduled model.">
+          </a>
+          <figcaption>No-scheduler model, epoch 1: the same labels and initial noise as the scheduled model.</figcaption>
+        </figure>
+
+        <figure>
+          <a href="class_no_scheduler_samples_epoch5.png">
+            <img src="class_no_scheduler_samples_epoch5.png" width="1440" height="552" alt="No-scheduler model, epoch 5: the same labels and initial noise as the scheduled model.">
+          </a>
+          <figcaption>No-scheduler model, epoch 5: the same labels and initial noise as the scheduled model.</figcaption>
+        </figure>
+
+        <figure>
+          <a href="class_no_scheduler_samples_epoch10.png">
+            <img src="class_no_scheduler_samples_epoch10.png" width="1440" height="552" alt="No-scheduler model, epoch 10: the same labels and initial noise as the scheduled model.">
+          </a>
+          <figcaption>No-scheduler model, epoch 10: the same labels and initial noise as the scheduled model.</figcaption>
+        </figure>
+
+        <p>The lower constant learning rate avoids keeping the relatively large initial 10⁻² rate throughout training. Both epoch-10 grids contain readable digits with broadly similar visual quality, though individual stroke shapes differ. This is a visual comparison, not a measured accuracy or distribution-quality score. The simpler setup removes scheduler tuning but still requires choosing a suitable fixed learning rate.</p>
+      </section>
+
+      <section id="bonus">
+        <h2>Bells &amp; Whistles: A Better Time-Only Model</h2>
+        <p>I continued the epoch-10 time-only checkpoint for 10 additional epochs. The architecture stayed unchanged. I initialized a fresh Adam optimizer at a constant learning rate of 10⁻⁴ and kept batch size 64. The before/after comparison uses the same ten seeds and the same 50 Euler steps.</p>
+        <figure>
+          <a href="bonus_time_loss.png">
+            <img src="bonus_time_loss.png" width="960" height="360" alt="Loss during the additional 10 training epochs; the moving average decreases slightly.">
+          </a>
+          <figcaption>Loss during the additional 10 training epochs; the moving average decreases slightly.</figcaption>
+        </figure>
+
+        <figure>
+          <a href="bonus_time_comparison.png">
+            <img src="bonus_time_comparison.png" width="1440" height="276" alt="Top: epoch 10. Bottom: epoch 20. Each column starts from the same noise.">
+          </a>
+          <figcaption>Top: epoch 10. Bottom: epoch 20. Each column starts from the same noise.</figcaption>
+        </figure>
+
+        <p>The improvement is modest: several strokes are cleaner, and the fifth sample becomes a more recognizable 3. Some samples remain ambiguous, including the second loop-like shape. Extra training refines individual digits but does not remove every failure or guarantee broader diversity.</p>
+      </section>
+
+      <section id="settings">
+        <h2>Experiment Settings</h2>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Experiment</th>
+                <th scope="col">D</th>
+                <th scope="col">Batch</th>
+                <th scope="col">Epochs</th>
+                <th scope="col">Adam learning rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Single-step denoising</td>
+                <td>128</td>
+                <td>256</td>
+                <td>5</td>
+                <td>10⁻⁴</td>
+              </tr>
+              <tr>
+                <td>Pure-noise denoising</td>
+                <td>128</td>
+                <td>256</td>
+                <td>5</td>
+                <td>10⁻⁴</td>
+              </tr>
+              <tr>
+                <td>Time-conditioned flow</td>
+                <td>64</td>
+                <td>64</td>
+                <td>10</td>
+                <td>10⁻², exponential decay</td>
+              </tr>
+              <tr>
+                <td>Class-conditioned flow</td>
+                <td>64</td>
+                <td>64</td>
+                <td>10</td>
+                <td>10⁻², exponential decay</td>
+              </tr>
+              <tr>
+                <td>No-scheduler comparison</td>
+                <td>64</td>
+                <td>64</td>
+                <td>10</td>
+                <td>10⁻³</td>
+              </tr>
+              <tr>
+                <td>Extended time-only model</td>
+                <td>64</td>
+                <td>64</td>
+                <td>10 additional</td>
+                <td>10⁻⁴, fresh optimizer</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>MNIST uses 60,000 training images and 10,000 test images. Training uses only the training split. All image values are normalized to [0, 1]; clipping is used only for visualization.</p>
+        <p>Reference: <a href="https://cal-cs180.github.io/fa26/hw/proj3-flow/partb.html">CS180/280A Project 3, Part B assignment and starter notebook</a>.</p>
+      </section>
+
+      <p><a href="../partA/index.html">← Part A</a> · <a href="../index.html">Project 3 overview</a> · <a href="../../index.html">Portfolio</a></p>
+    </main>
+  </body>
+</html>

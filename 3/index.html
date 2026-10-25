@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 3 — Fun with Flow Models</title>
+    <style>
+      body {
+        max-width: 1000px;
+        margin: 40px auto;
+        padding: 0 20px;
+        font-family: Arial, sans-serif;
+        line-height: 1.65;
+        color: #222;
+        background: white;
+      }
+
+      h1, .lead {
+        text-align: center;
+      }
+
+      h1 {
+        line-height: 1.25;
+      }
+
+      h2 {
+        line-height: 1.35;
+      }
+
+      h3 {
+        margin-top: 32px;
+      }
+
+      a {
+        color: #2864dc;
+      }
+
+      a:focus-visible {
+        outline: 2px solid #2864dc;
+        outline-offset: 4px;
+      }
+
+      section {
+        margin-top: 56px;
+      }
+
+      nav {
+        margin: 28px 0;
+        padding: 16px 0;
+        border-top: 1px solid #ddd;
+        border-bottom: 1px solid #ddd;
+      }
+
+      nav a {
+        display: inline-block;
+        margin: 4px 18px 4px 0;
+      }
+
+      figure {
+        margin: 26px 0;
+        min-width: 0;
+      }
+
+      img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      figcaption {
+        margin-top: 8px;
+        text-align: center;
+        font-size: .92rem;
+        color: #555;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 24px;
+      }
+
+      .grid figure {
+        margin: 12px 0;
+      }
+
+      .single {
+        max-width: 500px;
+        margin: 24px auto;
+      }
+
+      .distant {
+        width: 64px;
+        max-width: 100%;
+        margin: 24px auto;
+      }
+
+      .distant figcaption {
+        width: 160px;
+        margin-left: -48px;
+      }
+
+      .hybrid {
+        align-items: center;
+      }
+
+      pre {
+        background: #f3f3f3;
+        padding: 16px;
+        overflow-x: auto;
+        line-height: 1.5;
+      }
+
+      code {
+        overflow-wrap: anywhere;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th, td {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+        text-align: left;
+      }
+
+      .muted {
+        color: #666;
+      }
+
+      footer {
+        margin: 56px 0 24px;
+        padding-top: 20px;
+        border-top: 1px solid #ddd;
+      }
+
+      @media (max-width: 600px) {
+        body {
+          margin: 24px auto;
+          padding: 0 16px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 1.8rem;
+        }
+
+      }
+
+      @media print {
+        body {
+          max-width: none;
+          margin: 0;
+          padding: 0;
+          font-size: 10pt;
+        }
+
+        nav, .back {
+          display: none;
+        }
+
+        section {
+          margin-top: 28px;
+        }
+
+        figure, pre, table {
+          break-inside: avoid;
+        }
+
+        h2, h3 {
+          break-after: avoid;
+        }
+
+        a {
+          color: inherit;
+          text-decoration: none;
+        }
+
+        pre {
+          white-space: pre-wrap;
+        }
+
+      }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <a class="back" href="../index.html">← Back to portfolio</a>
+      <h1>Fun with Flow Models</h1>
+      <p class="lead">CS280A Project 3<br>Benny ChenYu Wan</p>
+      <p>This project explores image generation with flow models: first using a pretrained model, then training a model from scratch on MNIST.</p>
+      <section>
+        <h2><a href="partA/index.html">Part A: Exploring the Power of Flow Models</a></h2>
+        <p>Denoising, Euler sampling, classifier-free guidance, image editing, visual anagrams, hybrid images, and a course-logo experiment using PixNerd.</p>
+        <figure>
+          <a href="partA/index.html">
+            <img src="partA/20261024-193912-9d12f6/bonus_inversion_views_210.png" alt="A snowy mountain landscape becomes a skull when its colors are inverted." width="880" height="440">
+          </a>
+          <figcaption>Color-inversion illusion from the Bells &amp; Whistles experiments.</figcaption>
+        </figure>
+
+        <p><a href="partA/index.html">Read Part A →</a></p>
+      </section>
+
+      <section>
+        <h2><a href="PartB/index.html">Part B: Flow Matching from Scratch</a></h2>
+        <p>Training UNets on MNIST: single-step denoising, time-conditioned flow matching, class-conditioned generation, and extended training.</p>
+        <figure>
+          <a href="PartB/index.html">
+            <img src="PartB/class_samples_epoch10.png" width="1440" height="552" alt="Four generated examples of each digit 0–9 after 10 epochs of class-conditioned training.">
+          </a>
+          <figcaption>Class-conditioned MNIST samples after 10 epochs.</figcaption>
+        </figure>
+
+        <p><a href="PartB/index.html">Read Part B →</a></p>
+      </section>
+
+    </main>
+  </body>
+</html>

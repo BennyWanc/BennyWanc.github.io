@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 3, Part A — Fun with Flow Models</title>
+    <style>
+      body {
+        max-width: 1000px;
+        margin: 40px auto;
+        padding: 0 20px;
+        font-family: Arial, sans-serif;
+        line-height: 1.65;
+        color: #222;
+        background: white;
+      }
+
+      h1, .lead {
+        text-align: center;
+      }
+
+      h1 {
+        line-height: 1.25;
+      }
+
+      h2 {
+        line-height: 1.35;
+      }
+
+      h3 {
+        margin-top: 32px;
+      }
+
+      a {
+        color: #2864dc;
+      }
+
+      a:focus-visible {
+        outline: 2px solid #2864dc;
+        outline-offset: 4px;
+      }
+
+      section {
+        margin-top: 56px;
+      }
+
+      nav {
+        margin: 28px 0;
+        padding: 16px 0;
+        border-top: 1px solid #ddd;
+        border-bottom: 1px solid #ddd;
+      }
+
+      nav a {
+        display: inline-block;
+        margin: 4px 18px 4px 0;
+      }
+
+      figure {
+        margin: 26px 0;
+        min-width: 0;
+      }
+
+      img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      figcaption {
+        margin-top: 8px;
+        text-align: center;
+        font-size: .92rem;
+        color: #555;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 24px;
+      }
+
+      .grid figure {
+        margin: 12px 0;
+      }
+
+      .single {
+        max-width: 500px;
+        margin: 24px auto;
+      }
+
+      .distant {
+        width: 64px;
+        max-width: 100%;
+        margin: 24px auto;
+      }
+
+      .distant figcaption {
+        width: 160px;
+        margin-left: -48px;
+      }
+
+      .hybrid {
+        align-items: center;
+      }
+
+      pre {
+        background: #f3f3f3;
+        padding: 16px;
+        overflow-x: auto;
+        line-height: 1.5;
+      }
+
+      code {
+        overflow-wrap: anywhere;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th, td {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+        text-align: left;
+      }
+
+      .muted {
+        color: #666;
+      }
+
+      footer {
+        margin: 56px 0 24px;
+        padding-top: 20px;
+        border-top: 1px solid #ddd;
+      }
+
+      @media (max-width: 600px) {
+        body {
+          margin: 24px auto;
+          padding: 0 16px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 1.8rem;
+        }
+
+      }
+
+      @media print {
+        body {
+          max-width: none;
+          margin: 0;
+          padding: 0;
+          font-size: 10pt;
+        }
+
+        nav, .back {
+          display: none;
+        }
+
+        section {
+          margin-top: 28px;
+        }
+
+        figure, pre, table {
+          break-inside: avoid;
+        }
+
+        h2, h3 {
+          break-after: avoid;
+        }
+
+        a {
+          color: inherit;
+          text-decoration: none;
+        }
+
+        pre {
+          white-space: pre-wrap;
+        }
+
+      }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <a class="back" href="../index.html">← Project 3 overview</a>
+      <h1>Exploring the Power of Flow Models</h1>
+      <p class="lead">CS280A Project 3 · Part A<br>Benny ChenYu Wan</p>
+      <nav aria-label="Sections">
+        <a href="#inputs">1. Training and sampling</a>
+        <a href="#cfg">2. Guidance</a>
+        <a href="#editing">3. Creative applications</a>
+        <a href="#extras">Bells &amp; Whistles</a>
+        <a href="#settings">Settings and references</a>
+      </nav>
+
+      <p>The experiments use 512 × 512 RGB images normalized to [−1, 1]. Time runs from noise at <strong>t = 0</strong> to a clean image at <strong>t = 1</strong>. Euler sampling uses step size 0.02; guided experiments use CFG weight 7.</p>
+      <section id="inputs">
+        <h2>1.1 Constructing Noisy Training Inputs</h2>
+        <p>I used my photograph of a Chinese wooden pagoda throughout Sections 1.1–1.5. I sampled one Gaussian noise tensor and reused it at all three times, so the comparison changes only the interpolation weight.</p>
+        <pre><code>x_t = (1 - t) * epsilon + t * image</code></pre>
+        <figure class="">
+          <a href="20261024-193912-9d12f6/training_inputs.png">
+            <img src="20261024-193912-9d12f6/training_inputs.png" width="1760" height="440" alt="Original pagoda and noisy inputs at t = 0.25, 0.50, and 0.75.">
+          </a>
+          <figcaption>Original pagoda and noisy inputs at t = 0.25, 0.50, and 0.75.</figcaption>
+        </figure>
+
+        <p>At smaller t, noise obscures the roof details and the sky. As t increases, more of the original architecture becomes visible. The endpoint checks return noise at t = 0 and the original image at t = 1.</p>
+      </section>
+
+      <section id="blur">
+        <h2>1.2 Classical Denoising</h2>
+        <p>I first divided each noisy input by t to restore the image amplitude, then applied Gaussian blur. I tried σ = 1, 2, 4, 8, and 16 and selected the lowest mean squared error (MSE) against the known original for each time.</p>
+        <pre><code>estimate = gaussian_blur(x_t / t)</code></pre>
+        <figure class="">
+          <a href="20261024-193912-9d12f6/blur_0.25.png">
+            <img src="20261024-193912-9d12f6/blur_0.25.png" width="880" height="440" alt="Noisy input and selected Gaussian blur at t = 0.25.">
+          </a>
+          <figcaption>Noisy input and selected Gaussian blur at t = 0.25.</figcaption>
+        </figure>
+
+        <figure class="">
+          <a href="20261024-193912-9d12f6/blur_0.5.png">
+            <img src="20261024-193912-9d12f6/blur_0.5.png" width="880" height="440" alt="Noisy input and selected Gaussian blur at t = 0.50.">
+          </a>
+          <figcaption>Noisy input and selected Gaussian blur at t = 0.50.</figcaption>
+        </figure>
+
+        <figure class="">
+          <a href="20261024-193912-9d12f6/blur_0.75.png">
+            <img src="20261024-193912-9d12f6/blur_0.75.png" width="880" height="440" alt="Noisy input and selected Gaussian blur at t = 0.75.">
+          </a>
+          <figcaption>Noisy input and selected Gaussian blur at t = 0.75.</figcaption>
+        </figure>
+
+      </section>
+
+      <section id="one-step">
+        <h2>1.3 One-Step Denoising</h2>
+        <p>Using the prompt “a high quality photo,” I predicted the velocity once and extrapolated over the remaining time. The model predicts velocity rather than noise, so the update is added to the input.</p>
+        <pre><code>estimate = x_t + (1 - t) * predict_velocity(x_t, t, condition)</code></pre>
+        <figure class="">
+          <a href="20261024-193912-9d12f6/one_step_0.25.png">
+            <img src="20261024-193912-9d12f6/one_step_0.25.png" width="1320" height="440" alt="Original, noisy input, and one-step estimate at t = 0.25.">
+          </a>
+          <figcaption>Original, noisy input, and one-step estimate at t = 0.25.</figcaption>
+        </figure>
+
+        <figure class="">
+          <a href="20261024-193912-9d12f6/one_step_0.5.png">
+            <img src="20261024-193912-9d12f6/one_step_0.5.png" width="1320" height="440" alt="Original, noisy input, and one-step estimate at t = 0.50.">
+          </a>
+          <figcaption>Original, noisy input, and one-step estimate at t = 0.50.</figcaption>
+        </figure>
+
+        <figure class="">
+          <a href="20261024-193912-9d12f6/one_step_0.75.png">
+            <img src="20261024-193912-9d12f6/one_step_0.75.png" width="1320" height="440" alt="Original, noisy input, and one-step estimate at t = 0.75.">
+          </a>
+          <figcaption>Original, noisy input, and one-step estimate at t = 0.75.</figcaption>
+        </figure>
+
+      </section>
+
+      <section id="velocity">
+        <h2>1.4 Visualizing Velocity</h2>
+        <p>I compared the predicted update with the exact update needed to recover the original. The error map is the root-mean-square difference across RGB at each pixel, calculated before display scaling. All update images share a symmetric scale with zero at middle gray, and all error maps share their limits.</p>
+        <pre><code>predicted_update = (1 - t) * predicted_velocity
+target_update = (1 - t) * (image - epsilon)
+error = ((predicted_update - target_update)**2).mean(dim=1).sqrt()</code></pre>
+        <figure class="single">
+          <a href="20261024-193912-9d12f6/velocity_original.png">
+            <img src="20261024-193912-9d12f6/velocity_original.png" width="512" height="512" alt="Original pagoda used for the velocity comparison.">
+          </a>
+          <figcaption>Original pagoda used for the velocity comparison.</figcaption>
+        </figure>
+
+        <figure class="">
+          <a href="20261024-193912-9d12f6/velocity_0.25.png">
+            <img src="20261024-193912-9d12f6/velocity_0.25.png" width="1760" height="440" alt="t = 0.25: noisy input, predicted update, ground-truth update, and RGB RMS error.">
+          </a>
+          <figcaption>t = 0.25: noisy input, predicted update, ground-truth update, and RGB RMS error.</figcaption>
+        </figure>
+
+        <figure class="">
+          <a href="20261024-193912-9d12f6/velocity_0.50.png">
+            <img src="20261024-193912-9d12f6/velocity_0.50.png" width="1760" height="440" alt="t = 0.50: noisy input, predicted update, ground-truth update, and RGB RMS error.">
+          </a>
+          <figcaption>t = 0.50: noisy input, predicted update, ground-truth update, and RGB RMS error.</figcaption>
+        </figure>
+
+        <figure class="">
+          <a href="20261024-193912-9d12f6/velocity_0.75.png">
+            <img src="20261024-193912-9d12f6/velocity_0.75.png" width="1760" height="440" alt="t = 0.75: noisy input, predicted update, ground-truth update, and RGB RMS error.">
+          </a>
+          <figcaption>t = 0.75: noisy input, predicted update, ground-truth update, and RGB RMS error.</figcaption>
+        </figure>
+
+      </section>
+
+      <section id="euler">
+        <h2>1.5 Iterative Denoising with Euler Sampling</h2>
+        <p>Starting from the saved t = 0.50 input, I took 25 Euler steps and recomputed the velocity after every update. The final step is shortened when necessary to end exactly at t = 1. The sampler passed constant-velocity checks for 50 steps, 25 steps, and a shortened final step.</p>
+        <pre><code>x_next = x + (next_t - t) * velocity(x, t)</code></pre>
+        <figure class="">
+          <a href="20261024-193912-9d12f6/trajectory.png">
+            <img src="20261024-193912-9d12f6/trajectory.png" width="1320" height="880" alt="Euler trajectory: initial state, every fifth update, and final image.">
+          </a>
+          <figcaption>Euler trajectory: initial state, every fifth update, and final image.</figcaption>
+        </figure>
+
+        <figure class="">
+          <a href="20261024-193912-9d12f6/comparison.png">
+            <img src="20261024-193912-9d12f6/comparison.png" width="1760" height="440" alt="The same t = 0.50 input: original, Gaussian blur, one-step denoising, and Euler denoising.">
+          </a>
+          <figcaption>The same t = 0.50 input: original, Gaussian blur, one-step denoising, and Euler denoising.</figcaption>
+        </figure>
+
+        <table>
+          <caption>Reconstruction MSE against the original, on normalized tensors</caption>
+          <thead>
+            <tr>
+              <th scope="col">Method</th>
+              <th scope="col">MSE</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Gaussian blur</th>
+              <td>0.060014</td>
+            </tr>
+            <tr>
+              <th scope="row">One step</th>
+              <td>0.026428</td>
+            </tr>
+            <tr>
+              <th scope="row">Euler</th>
+              <td>0.032403</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>Both model-based methods recover a cleaner image than blur. Euler produces textured architectural details, while the one-step output is smoother. </p>
+      </section>
+
+      <section id="generation">
+        <h2>1.6 Generating Images from Noise</h2>
+        <p>I started from independent Gaussian noise at t = 0 and ran 50 Euler updates with “a high quality photo,” without extra CFG. The five seeds are 180–184.</p>
+        <figure class="">
+          <a href="20261024-193912-9d12f6/conditional_samples.png">
+            <img src="20261024-193912-9d12f6/conditional_samples.png" width="1760" height="880" alt="Five conditional samples without extra guidance; seeds 180–184.">
+          </a>
+          <figcaption>Five conditional samples without extra guidance; seeds 180–184.</figcaption>
+        </figure>
+
+        <p>All five outputs are portraits despite the generic prompt. Quality varies: some faces are coherent, while the first sample loses facial features and another has a rough, painterly appearance.</p>
+      </section>
+
+      <section id="cfg">
+        <h2>2.1 Classifier-Free Guidance</h2>
+        <p>I evaluated the conditional and empty-prompt velocities at the same image and time, then combined them using the assignment’s CFG convention. The w = 0 check reproduces ordinary conditional prediction.</p>
+        <pre><code>v_cfg = v_cond + 7 * (v_cond - v_uncond)</code></pre>
+        <p>Each row below uses exactly the same initial noise with and without guidance. Both use “a high quality photo.”</p>
+        <div class="grid">
+          <figure class="">
+            <a href="20261024-193912-9d12f6/conditional_0.png">
+              <img src="20261024-193912-9d12f6/conditional_0.png" width="512" height="512" alt="Seed 180 · without extra CFG">
+            </a>
+            <figcaption>Seed 180 · without extra CFG</figcaption>
+          </figure>
+
+          <figure class="">
+            <a href="20261024-193912-9d12f6/cfg_0.png">
+              <img src="20261024-193912-9d12f6/cfg_0.png" width="512" height="512" alt="Seed 180 · CFG w = 7">
+            </a>
+            <figcaption>Seed 180 · CFG w = 7</figcaption>
+          </figure>
+
+        </div>
+        <div class="grid">
+          <figure class="">
+            <a href="20261024-193912-9d12f6/conditional_1.png">
+              <img src="20261024-193912-9d12f6/conditional_1.png" width="512" height="512" alt="Seed 181 · without extra CFG">
+            </a>
+            <figcaption>Seed 181 · without extra CFG</figcaption>
+          </figure>
+
+          <figure class="">
+            <a href="20261024-193912-9d12f6/cfg_1.png">
+              <img src="20261024-193912-9d12f6/cfg_1.png" width="512" height="512" alt="Seed 181 · CFG w = 7">
+            </a>
+            <figcaption>Seed 181 · CFG w = 7</figcaption>
+          </figure>
+
+        </div>
+        <div class="grid">
+          <figure class="">
+            <a href="20261024-193912-9d12f6/conditional_2.png">
+              <img src="20261024-193912-9d12f6/conditional_2.png" width="512" height="512" alt="Seed 182 · without extra CFG">
+            </a>
+            <figcaption>Seed 182 · without extra CFG</figcaption>
+          </figure>
+
+          <figure class="">
+            <a href="20261024-193912-9d12f6/cfg_2.png">
+              <img src="20261024-193912-9d12f6/cfg_2.png" width="512" height="512" alt="Seed 182 · CFG w = 7">
+            </a>
+            <figcaption>Seed 182 · CFG w = 7</figcaption>
+          </figure>
+
+        </div>
+        <div class="grid">
+          <figure class="">
+            <a href="20261024-193912-9d12f6/conditional_3.png">
+              <img src="20261024-193912-9d12f6/conditional_3.png" width="512" height="512" alt="Seed 183 · without extra CFG">
+            </a>
+            <figcaption>Seed 183 · without extra CFG</figcaption>
+          </figure>
+
+          <figure class="">
+            <a href="20261024-193912-9d12f6/cfg_3.png">
+              <img src="20261024-193912-9d12f6/cfg_3.png" width="512" height="512" alt="Seed 183 · CFG w = 7">
+            </a>
+            <figcaption>Seed 183 · CFG w = 7</figcaption>
+          </figure>
+
+        </div>
+        <div class="grid">
+          <figure class="">
+            <a href="20261024-193912-9d12f6/conditional_4.png">
+              <img src="20261024-193912-9d12f6/conditional_4.png" width="512" height="512" alt="Seed 184 · without extra CFG">
+            </a>
+            <figcaption>Seed 184 · without extra CFG</figcaption>
+          </figure>
+
+          <figure class="">
+            <a href="20261024-193912-9d12f6/cfg_4.png">
+              <img src="20261024-193912-9d12f6/cfg_4.png" width="512" height="512" alt="Seed 184 · CFG w = 7">
+            </a>
+            <figcaption>Seed 184 · CFG w = 7</figcaption>
+          </figure>
+
+        </div>
+        <p>CFG gives more coherent facial features and cleaner portrait lighting in these samples.</p>
+
+      <section id="editing">
+        <h2>3.1 Image-to-Image Editing</h2>
+        <p>I mixed each source image with noise at starting times 0.02, 0.04, 0.06, 0.10, 0.14, 0.25, and 0.50, then sampled to t = 1 using CFG and “a high quality photo.” The same seed (180) is reused across times. Smaller starting times allow larger changes; larger times retain more of the original.</p>
+        <pre><code>x_start = (1 - t_start) * epsilon + t_start * image
+result = Euler(x_start, t_start, CFG_velocity)</code></pre>
+        <figure class="">
+          <a href="20261024-193912-9d12f6/edit_campanile.png">
+            <img src="20261024-193912-9d12f6/edit_campanile.png" width="1760" height="880" alt="Campanile: original and seven starting times.">
+          </a>
+          <figcaption>Campanile: original and seven starting times.</figcaption>
+        </figure>
+
+        <figure class="">
+          <a href="20261024-193912-9d12f6/edit_my_image_1.png">
+            <img src="20261024-193912-9d12f6/edit_my_image_1.png" width="1760" height="880" alt="Personal photo 1: Chinese wooden pagoda.">
+          </a>
+          <figcaption>Personal photo 1: Chinese wooden pagoda.</figcaption>
+        </figure>
+
+        <figure class="">
+          <a href="20261024-193912-9d12f6/edit_my_image_2.png">
+            <img src="20261024-193912-9d12f6/edit_my_image_2.png" width="1760" height="880" alt="Personal photo 2: a boat on a canal.">
+          </a>
+          <figcaption>Personal photo 2: a boat on a canal.</figcaption>
+        </figure>
+
+        <h3>Web image and hand-drawn inputs</h3>
+        <figure class="">
+          <a href="20261024-193912-9d12f6/edit_web_image.png">
+            <img src="20261024-193912-9d12f6/edit_web_image.png" width="1760" height="880" alt="Web image: a modern tower, edited at the same seven starting times.">
+          </a>
+          <figcaption>Web image: a modern tower, edited at the same seven starting times.</figcaption>
+        </figure>
+
+        <!-- TODO: Add the original source URL for the downloaded tower photograph when available. -->
+        <figure class="">
+          <a href="20261024-193912-9d12f6/edit_drawing_1.png">
+            <img src="20261024-193912-9d12f6/edit_drawing_1.png" width="1760" height="880" alt="Drawing 1: a tree outline.">
+          </a>
+          <figcaption>Drawing 1: a tree outline.</figcaption>
+        </figure>
+
+        <figure class="">
+          <a href="20261024-193912-9d12f6/edit_drawing_2.png">
+            <img src="20261024-193912-9d12f6/edit_drawing_2.png" width="1760" height="880" alt="Drawing 2: a flower outline.">
+          </a>
+          <figcaption>Drawing 2: a flower outline.</figcaption>
+        </figure>
+
+        <p>The web tower becomes clouds or unrelated shapes at low starting times, then regains its silhouette as t increases. The sparse drawings are harder to turn into photographs: might because my drawing is too abstract. </p>
+      </section>
+
+      <section id="text-editing">
+        <h2>3.2 Text-Guided Image Editing</h2>
+        <p>I reused the same three photographs and seven starting times, changing only the conditional prompt to describe a new subject.</p>
+        <h3>Campanile → rocket</h3>
+        <p>Prompt: “a photograph of a rocket on a launch pad”</p>
+        <figure class="">
+          <a href="20261024-193912-9d12f6/text_edit_campanile.png">
+            <img src="20261024-193912-9d12f6/text_edit_campanile.png" width="1760" height="880" alt="Campanile → rocket at seven starting times.">
+          </a>
+          <figcaption>Campanile → rocket at seven starting times.</figcaption>
+        </figure>
+
+        <h3>Wooden pagoda → castle</h3>
+        <p>Prompt: “photograph of a medieval castle covered in ivy”</p>
+        <figure class="">
+          <a href="20261024-193912-9d12f6/text_edit_my_image_1.png">
+            <img src="20261024-193912-9d12f6/text_edit_my_image_1.png" width="1760" height="880" alt="Wooden pagoda → castle at seven starting times.">
+          </a>
+          <figcaption>Wooden pagoda → castle at seven starting times.</figcaption>
+        </figure>
+
+        <h3>Canal boat → glass flower</h3>
+        <p>Prompt: “a photograph of a flower sculpted from colorful glass”</p>
+        <figure class="">
+          <a href="20261024-193912-9d12f6/text_edit_my_image_2.png">
+            <img src="20261024-193912-9d12f6/text_edit_my_image_2.png" width="1760" height="880" alt="Canal boat → glass flower at seven starting times.">
+          </a>
+          <figcaption>Canal boat → glass flower at seven starting times.</figcaption>
+        </figure>
+
+        <p>The pagoda becomes an ivy-covered stone castle at low times. Around t = 0.10–0.14 it mixes the pagoda’s tiered shape with castle surfaces, and at t = 0.50 it stays close to the source. The boat example deliberately uses an unrelated flower prompt: low times produce a glass flower, middle times place glass forms on the water, and high times preserve the boat with smaller material changes.</p>
+      </section>
+
+      <section id="anagrams">
+        <h2>3.3 Visual Anagrams</h2>
+        <p>I predicted one CFG velocity for the upright image and another for the image rotated 180°. After rotating the second velocity back, I averaged both and used the result in each Euler step.</p>
+        <pre><code>v = (guided(x, t, prompt_a)
+     + rotate180(guided(rotate180(x), t, prompt_b))) / 2</code></pre>
+        <figure class="">
+          <a href="20261024-193912-9d12f6/anagram_views_0.png">
+            <img src="20261024-193912-9d12f6/anagram_views_0.png" width="880" height="440" alt="Seed 180: “an oil painting of an old man” / “an oil painting of people around a campfire”.">
+          </a>
+          <figcaption>Seed 180: “an oil painting of an old man” / “an oil painting of people around a campfire”.</figcaption>
+        </figure>
+
+        <figure class="">
+          <a href="20261024-193912-9d12f6/anagram_views_1.png">
+            <img src="20261024-193912-9d12f6/anagram_views_1.png" width="880" height="440" alt="Seed 181: “a lithograph of a snowy mountain village” / “a lithograph of a horse”.">
+          </a>
+          <figcaption>Seed 181: “a lithograph of a snowy mountain village” / “a lithograph of a horse”.</figcaption>
+        </figure>
+
+        <p>The first illusion uses warm highlights for both the man’s face and the fire. In the second, mountain and village outlines become a horse after rotation. Details from the alternate interpretation remain visible, so neither view is completely independent.</p>
+      </section>
+
+      <section id="hybrids">
+        <h2>3.4 Hybrid Images</h2>
+        <p>I combined the low frequencies of one CFG velocity with the high frequencies of another. The Gaussian low-pass filter uses σ = 16 and kernel size 265 at 512 × 512. The resulting velocity drives the same Euler sampler.</p>
+        <pre><code>v = lowpass(v_distant) + v_close - lowpass(v_close)</code></pre>
+        <h3>Waterfall / skull</h3>
+        <p>Close prompt: “a lithograph of a waterfall”. Distant prompt: “a lithograph of a skull”.</p>
+        <div class="grid hybrid">
+          <figure class="">
+            <a href="20261024-193912-9d12f6/hybrid_0.png">
+              <img src="20261024-193912-9d12f6/hybrid_0.png" width="512" height="512" alt="Close view: waterfall.">
+            </a>
+            <figcaption>Close view: waterfall.</figcaption>
+          </figure>
+
+          <figure class="distant">
+            <a href="20261024-193912-9d12f6/hybrid_0.png">
+              <img src="20261024-193912-9d12f6/hybrid_0.png" width="512" height="512" alt="64-pixel view: intended skull.">
+            </a>
+            <figcaption>64-pixel view: intended skull.</figcaption>
+          </figure>
+
+        </div>
+        <h3>Forest / cat</h3>
+        <p>Close prompt: “a lithograph of a forest”. Distant prompt: “a lithograph of a cat”.</p>
+        <div class="grid hybrid">
+          <figure class="">
+            <a href="20261024-193912-9d12f6/hybrid_1.png">
+              <img src="20261024-193912-9d12f6/hybrid_1.png" width="512" height="512" alt="Close view: forest.">
+            </a>
+            <figcaption>Close view: forest.</figcaption>
+          </figure>
+
+          <figure class="distant">
+            <a href="20261024-193912-9d12f6/hybrid_1.png">
+              <img src="20261024-193912-9d12f6/hybrid_1.png" width="512" height="512" alt="64-pixel view: intended cat.">
+            </a>
+            <figcaption>64-pixel view: intended cat.</figcaption>
+          </figure>
+
+        </div>
+        <p>The waterfall and forest details are clear up close. The intended distant subjects are weaker: the first has a rounded head-like outline, while the second has a face-like arrangement of trees but does not read as an unambiguous cat. Combining frequencies does not guarantee equally recognizable subjects.</p>
+      </section>
+
+      <section id="extras">
+        <h2>Bells &amp; Whistles</h2>
+        <p>I adapted the parallel denoising idea from <a href="https://arxiv.org/abs/2311.17919">Visual Anagrams</a>: transform the current image, predict in each view, inverse-transform the second prediction, and average. Here the predictions are flow velocities rather than diffusion noise. I tested two additional transformations.</p>
+        <pre><code>v = (guided(x, t, prompt_a)
+     + inverse(guided(transform(x), t, prompt_b))) / 2</code></pre>
+        <h3>90° rotation</h3>
+        <p>The forward transform rotates 90° counterclockwise; the inverse rotates 90° clockwise. I checked that composing them restores the original tensor.</p>
+        <figure class="">
+          <a href="20261024-193912-9d12f6/bonus_rotation90_views_200.png">
+            <img src="20261024-193912-9d12f6/bonus_rotation90_views_200.png" width="880" height="440" alt="Seed 200: “a charcoal drawing of a mountain landscape” / “a charcoal drawing of a woman&#x27;s face”.">
+          </a>
+          <figcaption>Seed 200: “a charcoal drawing of a mountain landscape” / “a charcoal drawing of a woman&#x27;s face”.</figcaption>
+        </figure>
+
+        <p>The mountain ridges become facial features after rotation, while the dark landscape boundary becomes hair. Both subjects are recognizable, although traces of the alternate view remain.</p>
+        <h3>Color inversion</h3>
+        <p>For tensors in [−1, 1], color inversion is simply −x, and it is its own inverse. I apply the same negation to align the velocity. Rotation and negation are linear orthogonal transformations that preserve standard Gaussian noise statistics.</p>
+        <figure class="">
+          <a href="20261024-193912-9d12f6/bonus_inversion_views_210.png">
+            <img src="20261024-193912-9d12f6/bonus_inversion_views_210.png" width="880" height="440" alt="Seed 210: “a black and white lithograph of a snowy mountain” / “a black and white lithograph of a skull”.">
+          </a>
+          <figcaption>Seed 210: “a black and white lithograph of a snowy mountain” / “a black and white lithograph of a skull”.</figcaption>
+        </figure>
+
+        <p>Bright snow turns into dark facial cavities after inversion, revealing the skull’s eye sockets, nose, and teeth. The mountain view still contains traces of the skull shape.</p>
+        <h3>Course logo</h3>
+        <p>I drew a camera with a clock tower inside the lens, then used text-guided editing with seed 220 at t = 0.10, 0.25, and 0.50.</p>
+        <p>Prompt: “a clean logo for a Berkeley computer vision course, a camera aperture surrounding the Campanile tower, navy blue and golden yellow, simple bold geometric shapes, white background, no text”</p>
+        <figure class="">
+          <a href="20261024-193912-9d12f6/course_logo_comparison.png">
+            <img src="20261024-193912-9d12f6/course_logo_comparison.png" width="1760" height="440" alt="Original camera-and-tower sketch and three course-logo variations.">
+          </a>
+          <figcaption>Original camera-and-tower sketch and three course-logo variations.</figcaption>
+        </figure>
+
+        <p>At t = 0.10 the model adds more tower detail, but also introduces unwanted text-like marks despite the prompt. Larger starting times preserve the simple drawing. The requested gold color is not clearly realized; this experiment is more successful at preserving the emblem structure than following every style instruction.</p>
+      </section>
+
+      <section id="settings">
+        <h2>Settings and References</h2>
+        <p>Model: <code>MCG-NJU/PixNerd-XXL-P16-T2I</code>. Experiments ran in float32 on a Tesla T4, with seed 180 unless otherwise labeled, Euler step size 0.02, and CFG weight 7. <a href="20261024-193912-9d12f6/metrics.json">View saved experiment metrics</a>.</p>
+        <ul>
+          <li><a href="https://cal-cs180.github.io/fa26/hw/proj3-flow/parta.html">CS180/280A Project 3, Part A assignment and starter notebook</a></li>
+          <li><a href="https://arxiv.org/abs/2311.17919">Geng, Park, and Owens — Visual Anagrams: Generating Multi-View Optical Illusions with Diffusion Models</a></li>
+        </ul>
+      </section>
+
+      <footer>
+        <a href="../index.html">Project 3 overview</a>
+        ·
+        <a href="../../index.html">Portfolio</a>
+      </footer>
+    </main>
+  </body>
+</html>

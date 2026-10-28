@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 4, Part A — Image Warping and Mosaicing</title>
+    <style>
+      body {
+        max-width: 1000px;
+        margin: 40px auto;
+        padding: 0 20px;
+        font-family: Arial, sans-serif;
+        line-height: 1.65;
+        color: #222;
+        background: white;
+      }
+
+      h1, .lead {
+        text-align: center;
+      }
+
+      h1 {
+        line-height: 1.25;
+      }
+
+      h2 {
+        line-height: 1.35;
+      }
+
+      h3 {
+        margin-top: 32px;
+      }
+
+      a {
+        color: #2864dc;
+      }
+
+      a:focus-visible {
+        outline: 2px solid #2864dc;
+        outline-offset: 4px;
+      }
+
+      section {
+        margin-top: 56px;
+      }
+
+      nav {
+        margin: 28px 0;
+        padding: 16px 0;
+        border-top: 1px solid #ddd;
+        border-bottom: 1px solid #ddd;
+      }
+
+      nav a {
+        display: inline-block;
+        margin: 4px 18px 4px 0;
+      }
+
+      figure {
+        margin: 26px 0;
+        min-width: 0;
+      }
+
+      img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      figcaption {
+        margin-top: 8px;
+        text-align: center;
+        font-size: .92rem;
+        color: #555;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 24px;
+      }
+
+      .grid figure {
+        margin: 12px 0;
+      }
+
+      .single {
+        max-width: 500px;
+        margin: 24px auto;
+      }
+
+      .distant {
+        width: 64px;
+        max-width: 100%;
+        margin: 24px auto;
+      }
+
+      .distant figcaption {
+        width: 160px;
+        margin-left: -48px;
+      }
+
+      .hybrid {
+        align-items: center;
+      }
+
+      pre {
+        background: #f3f3f3;
+        padding: 16px;
+        overflow-x: auto;
+        line-height: 1.5;
+      }
+
+      code {
+        overflow-wrap: anywhere;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th, td {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+        text-align: left;
+      }
+
+      .muted {
+        color: #666;
+      }
+
+      footer {
+        margin: 56px 0 24px;
+        padding-top: 20px;
+        border-top: 1px solid #ddd;
+      }
+
+      @media (max-width: 600px) {
+        body {
+          margin: 24px auto;
+          padding: 0 16px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 1.8rem;
+        }
+
+      }
+
+      @media print {
+        body {
+          max-width: none;
+          margin: 0;
+          padding: 0;
+          font-size: 10pt;
+        }
+
+        nav, .back {
+          display: none;
+        }
+
+        section {
+          margin-top: 28px;
+        }
+
+        figure, pre, table {
+          break-inside: avoid;
+        }
+
+        h2, h3 {
+          break-after: avoid;
+        }
+
+        a {
+          color: inherit;
+          text-decoration: none;
+        }
+
+        pre {
+          white-space: pre-wrap;
+        }
+
+      }
+    
+.grid.three {grid-template-columns:repeat(3,minmax(0,1fr));}
+@media(max-width:600px){.grid.three{grid-template-columns:1fr;}}
+@media print{img{max-height:190mm;object-fit:contain;} .grid img{max-height:100mm;}}
+</style>
+  </head>
+  <body>
+    <main>
+      <a class="back" href="../../index.html">← Back to portfolio</a>
+      <h1>Image Warping and Mosaicing</h1>
+      <p class="lead">CS280A Project 4 · Part A<br>Benny ChenYu Wan</p>
+      <nav aria-label="Sections">
+        <a href="#a1">A.1 Photos</a>
+        <a href="#a2">A.2 Homographies</a>
+        <a href="#a3">A.3 Rectification</a>
+        <a href="#a4">A.4 Mosaics</a>
+        <a href="#a5">A.5 Bells &amp; Whistles</a>
+      </nav>
+      <p>This project combines overlapping photographs using manually selected correspondences, least-squares homographies, inverse warping, and feathered blending. It also rectifies two planar surfaces and compares planar and cylindrical mosaics.</p>
+      <section id="a1">
+        <h2>A.1 — Shoot and Digitize Pictures</h2>
+        <p>The three input sets show a church interior, a brick building, and a building under construction. The first photo was web searched and the last 2 sets are my photos. The overlap provides architectural features for manual matching. The building images were resized to a maximum dimension of 1600 pixels before selecting points.</p>
+        <h3>Set 1: Church interior</h3>
+        <div class="grid three">
+          <figure>
+            <a href="sources/a1.png">
+              <img src="sources/a1.png" width="600" height="768" alt="Source a1.png">
+            </a>
+            <figcaption>Source a1.png</figcaption>
+          </figure>
+          <figure>
+            <a href="sources/a2.png">
+              <img src="sources/a2.png" width="600" height="768" alt="Source a2.png">
+            </a>
+            <figcaption>Source a2.png</figcaption>
+          </figure>
+          <figure>
+            <a href="sources/a3.png">
+              <img src="sources/a3.png" width="600" height="768" alt="Source a3.png">
+            </a>
+            <figcaption>Source a3.png</figcaption>
+          </figure>
+        </div>
+        <h3>Set 2: Brick building</h3>
+        <div class="grid">
+          <figure>
+            <a href="sources/b1.JPG">
+              <img src="sources/b1.JPG" width="1200" height="1600" alt="Source b1.JPG">
+            </a>
+            <figcaption>Source b1.JPG</figcaption>
+          </figure>
+          <figure>
+            <a href="sources/b2.JPG">
+              <img src="sources/b2.JPG" width="1200" height="1600" alt="Source b2.JPG">
+            </a>
+            <figcaption>Source b2.JPG</figcaption>
+          </figure>
+        </div>
+        <h3>Set 3: Building under construction</h3>
+        <div class="grid">
+          <figure>
+            <a href="sources/c1.JPG">
+              <img src="sources/c1.JPG" width="1200" height="1600" alt="Source c1.JPG">
+            </a>
+            <figcaption>Source c1.JPG</figcaption>
+          </figure>
+          <figure>
+            <a href="sources/c2.JPG">
+              <img src="sources/c2.JPG" width="1200" height="1600" alt="Source c2.JPG">
+            </a>
+            <figcaption>Source c2.JPG</figcaption>
+          </figure>
+        </div>
+      </section>
+      <section id="a2">
+        <h2>A.2 — Recover Homographies</h2>
+        <p>I selected 8 matching points per church pair and 12 per building pair. Coordinates are (x, y), with integer coordinates at pixel centers. H maps a source image into its reference image: a2, b2, or c2.</p>
+        <pre>u = (h11 x + h12 y + h13) / (h31 x + h32 y + 1)
+v = (h21 x + h22 y + h23) / (h31 x + h32 y + 1)
+
+[x y 1 0 0 0 -ux -uy] h = u
+[0 0 0 x y 1 -vx -vy] h = v</pre>
+        <p>Stacking these two rows for every match gives Ah = b. I solve the overdetermined system with least squares and reshape the eight unknowns into H with h33 = 1.</p>
+        <h3>Set 1: image 1 → image 2</h3>
+        <figure>
+          <a href="results/mosaic_1_points_0.png">
+            <img src="results/mosaic_1_points_0.png" width="1800" height="750" alt="Set 1: image 1 → image 2 — numbered correspondences">
+          </a>
+          <figcaption>Set 1: image 1 → image 2 — numbered correspondences</figcaption>
+        </figure>
+        <pre>[  1.546052  -0.141461  -218.105914 ]
+[  0.505987   1.492656  -255.342902 ]
+[  0.000753   0.000179   1.000000 ]</pre>
+        <p>Reprojection RMS on the selected matches: <strong>1.77 pixels</strong>. This is a fitting error, not an independent accuracy test.</p>
+        <h3>Set 1: image 3 → image 2</h3>
+        <figure>
+          <a href="results/mosaic_1_points_2.png">
+            <img src="results/mosaic_1_points_2.png" width="1800" height="750" alt="Set 1: image 3 → image 2 — numbered correspondences">
+          </a>
+          <figcaption>Set 1: image 3 → image 2 — numbered correspondences</figcaption>
+        </figure>
+        <pre>[  0.669718   0.016756   143.689845 ]
+[ -0.244450   0.638846   113.323589 ]
+[ -0.000356  -0.000319   1.000000 ]</pre>
+        <p>Reprojection RMS on the selected matches: <strong>2.31 pixels</strong>. This is a fitting error, not an independent accuracy test.</p>
+        <h3>Set 2: image 1 → image 2</h3>
+        <figure>
+          <a href="results/mosaic_2_points_0.png">
+            <img src="results/mosaic_2_points_0.png" width="1800" height="750" alt="Set 2: image 1 → image 2 — numbered correspondences">
+          </a>
+          <figcaption>Set 2: image 1 → image 2 — numbered correspondences</figcaption>
+        </figure>
+        <pre>[  1.128245  -0.031764  -468.422866 ]
+[  0.135022   1.127791  -203.985114 ]
+[  0.000110   0.000029   1.000000 ]</pre>
+        <p>Reprojection RMS on the selected matches: <strong>5.28 pixels</strong>. This is a fitting error, not an independent accuracy test.</p>
+        <h3>Set 3: image 1 → image 2</h3>
+        <figure>
+          <a href="results/mosaic_3_points_0.png">
+            <img src="results/mosaic_3_points_0.png" width="1800" height="750" alt="Set 3: image 1 → image 2 — numbered correspondences">
+          </a>
+          <figcaption>Set 3: image 1 → image 2 — numbered correspondences</figcaption>
+        </figure>
+        <pre>[  0.975986  -0.016621  -648.562282 ]
+[ -0.014910   0.958622  -0.759739 ]
+[ -0.000031  -0.000010   1.000000 ]</pre>
+        <p>Reprojection RMS on the selected matches: <strong>7.60 pixels</strong>. This is a fitting error, not an independent accuracy test.</p>
+      </section>
+      <section id="a3">
+        <h2>A.3 — Warp Images</h2>
+        <p>For each output pixel I apply inverse H, then sample the original image. Nearest-neighbor interpolation rounds to the nearest pixel. Bilinear interpolation combines four neighboring pixels using their fractional-distance weights.</p>
+        <p>The four source corners are ordered top-left, top-right, bottom-right, bottom-left and mapped to (0,0), (W−1,0), (W−1,H−1), (0,H−1). The width-to-height ratios below are assumptions rather than measured dimensions, so these examples demonstrate rectification under those assumptions rather than verified metric recovery.</p>
+        <h3>1. Bike-lane marking</h3>
+        <p>Output: 400 × 800; width/height = 0.5.</p>
+        <figure>
+          <a href="results/rectification_1_points.png">
+            <img src="results/rectification_1_points.png" width="1800" height="750" alt="Original image, selected corners, and rectified surface">
+          </a>
+          <figcaption>Original image, selected corners, and rectified surface</figcaption>
+        </figure>
+        <div class="grid">
+          <figure>
+            <a href="results/rectification_1_nearest.png">
+              <img src="results/rectification_1_nearest.png" width="400" height="800" alt="Nearest neighbor">
+            </a>
+            <figcaption>Nearest neighbor</figcaption>
+          </figure>
+          <figure>
+            <a href="results/rectification_1_bilinear.png">
+              <img src="results/rectification_1_bilinear.png" width="400" height="800" alt="Bilinear">
+            </a>
+            <figcaption>Bilinear</figcaption>
+          </figure>
+        </div>
+        <p>Recovered homography:</p>
+        <pre>[ -10.843670   5.230211  -1318.001029 ]
+[ -1.030617  -30.689480   15006.905211 ]
+[  0.000764  -0.023154   1.000000 ]</pre>
+        <h3>2. Noodle-box top face</h3>
+        <p>Output: 800 × 800; width/height = 1.0.</p>
+        <figure>
+          <a href="results/rectification_2_points.png">
+            <img src="results/rectification_2_points.png" width="1800" height="750" alt="Original image, selected corners, and rectified surface">
+          </a>
+          <figcaption>Original image, selected corners, and rectified surface</figcaption>
+        </figure>
+        <div class="grid">
+          <figure>
+            <a href="results/rectification_2_nearest.png">
+              <img src="results/rectification_2_nearest.png" width="800" height="800" alt="Nearest neighbor">
+            </a>
+            <figcaption>Nearest neighbor</figcaption>
+          </figure>
+          <figure>
+            <a href="results/rectification_2_bilinear.png">
+              <img src="results/rectification_2_bilinear.png" width="800" height="800" alt="Bilinear">
+            </a>
+            <figcaption>Bilinear</figcaption>
+          </figure>
+        </div>
+        <p>Recovered homography:</p>
+        <pre>[  2.253318   0.204847  -398.355806 ]
+[  0.189303   5.273441  -3450.802058 ]
+[ -0.000038   0.001876   1.000000 ]</pre>
+        <table>
+          <caption>Warp time from one saved run (milliseconds)</caption>
+          <thead>
+            <tr>
+              <th>Example</th>
+              <th>Nearest neighbor</th>
+              <th>Bilinear</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Rectification 1</td>
+              <td>33.97</td>
+              <td>47.28</td>
+            </tr>
+            <tr>
+              <td>Rectification 2</td>
+              <td>35.16</td>
+              <td>95.15</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>Nearest neighbor is faster but can be less in quality. Bilinear interpolation smooths those transitions, with some softening of fine detail. </p>
+      </section>
+      <section id="a4">
+        <h2>A.4 — Blend Images into a Mosaic</h2>
+        <p>I keep the second image as the reference, compute a shared canvas, and inverse-warp all sources using bilinear interpolation. Each source receives a weight based on distance to its nearest edge, with larger weights in the interior. The warped colors are combined using a normalized weighted average:</p>
+        <pre>mosaic(x,y) = sum(weight_i(x,y) × color_i(x,y)) / sum(weight_i(x,y))</pre>
+        <p>Only valid pixels contribute. The irregular outside boundary is transparent, rather than missing black image content.</p>
+        <h3>Mosaic 1: Church interior</h3>
+        <p>Source images are shown in <a href="#a1">A.1, Set 1</a>.</p>
+        <figure>
+          <a href="results/mosaic_1.png">
+            <img src="results/mosaic_1.png" width="1318" height="1100" alt="Church interior — feathered planar mosaic">
+          </a>
+          <figcaption>Church interior — feathered planar mosaic</figcaption>
+        </figure>
+        <h3>Mosaic 2: Brick building</h3>
+        <p>Source images are shown in <a href="#a1">A.1, Set 2</a>.</p>
+        <figure>
+          <a href="results/mosaic_2.png">
+            <img src="results/mosaic_2.png" width="1697" height="1804" alt="Brick building — feathered planar mosaic">
+          </a>
+          <figcaption>Brick building — feathered planar mosaic</figcaption>
+        </figure>
+        <h3>Mosaic 3: Building under construction</h3>
+        <p>Source images are shown in <a href="#a1">A.1, Set 3</a>.</p>
+        <figure>
+          <a href="results/mosaic_3.png">
+            <img src="results/mosaic_3.png" width="1886" height="1620" alt="Building under construction — feathered planar mosaic">
+          </a>
+          <figcaption>Building under construction — feathered planar mosaic</figcaption>
+        </figure>
+        <p>Feathering reduces abrupt seams, but it does not give better picture. The worse figure might because the points choosen mannually.</p>
+      </section>
+      <section id="a5">
+        <h2>A.5 — Bells &amp; Whistles: Cylindrical Mosaics</h2>
+        <p>I reused the church correspondences and homographies to render the full mosaic onto a cylinder. For a cylinder pixel (u,v), relative to the cylinder origin, I first recover its reference-plane position:</p>
+        <pre>theta = u / f
+x = f tan(theta) + cx
+y = v / cos(theta) + cy
+source_position ∝ inverse(H) [x, y, 1]ᵀ</pre>
+        <p>Here (cx,cy) is the center of the reference photo and f is in reference-image pixels. I sample each original photograph directly with bilinear interpolation, then feather the samples together. This avoids resampling an already blended planar image. The focal lengths are visual choices, not camera calibration estimates.</p>
+        <figure>
+          <a href="results/mosaic_1.png">
+            <img src="results/mosaic_1.png" width="1318" height="1100" alt="Planar mosaic — comparison baseline">
+          </a>
+          <figcaption>Planar mosaic — comparison baseline</figcaption>
+        </figure>
+        <figure>
+          <a href="results/mosaic_1_cylinder_f300.png">
+            <img src="results/mosaic_1_cylinder_f300.png" width="686" height="1101" alt="Cylindrical mosaic — f = 300 pixels">
+          </a>
+          <figcaption>Cylindrical mosaic — f = 300 pixels</figcaption>
+        </figure>
+        <figure>
+          <a href="results/mosaic_1_cylinder_f600.png">
+            <img src="results/mosaic_1_cylinder_f600.png" width="996" height="1101" alt="Cylindrical mosaic — f = 600 pixels">
+          </a>
+          <figcaption>Cylindrical mosaic — f = 600 pixels</figcaption>
+        </figure>
+        <figure>
+          <a href="results/mosaic_1_cylinder_f900.png">
+            <img src="results/mosaic_1_cylinder_f900.png" width="1136" height="1101" alt="Cylindrical mosaic — f = 900 pixels">
+          </a>
+          <figcaption>Cylindrical mosaic — f = 900 pixels</figcaption>
+        </figure>
+        <p>The smaller focal length compresses the sides more strongly. At 900 pixels the geometry is closer to the planar mosaic. Projection changes the shape of the panorama but does not fix the original alignment error.</p>
+      </section>
+      <footer>
+        <a href="../../index.html">Back to portfolio</a>
+      </footer>
+    </main>
+  </body>
+</html>
